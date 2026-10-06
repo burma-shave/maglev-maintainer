@@ -1,0 +1,24 @@
+{
+  "name": "maglev-pr-maintainer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pi extension, tools, TUI, and skills for maintaining OneBusAway/maglev PRs.",
+  "keywords": ["pi-package", "maglev", "pull-requests", "triage"],
+  "type": "module",
+  "scripts": {
+    "check": "node --check extensions/*.ts testdata/*.ts tests/*.test.ts",
+    "test": "node --test tests/*.test.ts"
+  },
+  "pi": {
+    "extensions": ["./extensions"],
+    "skills": ["./skills"],
+    "subagents": {
+      "agents": ["./agents"]
+    }
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}
