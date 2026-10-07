@@ -19,6 +19,7 @@ import { checkSnapshotStaleness, formatSnapshotStaleness } from "./snapshot-stal
 import { buildStateQuery, formatStateQueryJson } from "./state-query.ts";
 import { getMaintainerStatus, type MaintainerStatus } from "./status.ts";
 import { compactPrLine, computeNeedsInference, listPrsNeedingInference, loadPrMetadata } from "./triage.ts";
+import { decisionGetToolResult, decisionListToolResult, loadMetadataToolResult, needsInferenceToolResult } from "./triage-tool-results.ts";
 import { atomicWriteJson, commandSucceeds, runJson, runText, toolResult } from "./utils.ts";
 import { buildWorkspaceContext, formatWorkspaceContext } from "./workspace-context.ts";
 import { formatCompanionReposReport, resolveCompanionRepos } from "./companion-repos.ts";
@@ -579,15 +580,13 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "maglev_pr_load_metadata",
 		label: "Maglev PR Load Metadata",
-		description: "Read selected PR metadata from the local Maglev PR GitHub snapshot. No live GitHub calls.",
+		description: "Read full selected PR facts, including discussions, reviews, commits, and snapshot identity, into model context from the local Maglev PR GitHub snapshot. No live GitHub calls.",
 		promptSnippet: "Load PR facts from the local Maglev PR snapshot by number, all PRs, or needs-inference selection.",
-		promptGuidelines: ["Use maglev_pr_load_metadata for Maglev PR inference instead of calling gh directly."],
+		promptGuidelines: ["Use maglev_pr_load_metadata for Maglev PR inference instead of calling gh directly.", "For backlog triage, delegate one PR per fresh-context analyst; keep the parent on compact needs-inference and decision-list output. Focused parent inspection of an intentionally selected PR remains available."],
 		parameters: LoadMetadataParamsSchema,
 		async execute(_toolCallId, params) {
 			const result = await loadPrMetadata(params, { loadSnapshot, loadDecisions });
-			const text = [`Loaded ${result.pullRequests.length} PRs from ${SNAPSHOT_FILE} (snapshot ${result.snapshotFetchedAt}).`, ...result.pullRequests.slice(0, 20).map(compactPrLine)];
-			if (result.missing.length) text.push(`Missing from open-PR snapshot: ${result.missing.map((number) => `#${number}`).join(", ")}`);
-			return toolResult(text.join("\n"), { snapshotFile: SNAPSHOT_FILE, snapshotFetchedAt: result.snapshotFetchedAt, repo: result.repo, pullRequests: result.pullRequests, missing: result.missing });
+			return loadMetadataToolResult(result, SNAPSHOT_FILE);
 		},
 	});
 
@@ -631,11 +630,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 		parameters: NeedsInferenceParamsSchema,
 		async execute(_toolCallId, params) {
 			const result = await listPrsNeedingInference(params, { loadSnapshot, loadDecisions });
-			const text = [
-				`${result.prs.length} PRs need inference from snapshot ${result.snapshotFetchedAt}.`,
-				...result.prs.slice(0, 30).map((pr) => `#${pr.number} ${pr.title} — ${pr.reason}`),
-			].filter(Boolean).join("\n");
-			return toolResult(text, { snapshotFile: SNAPSHOT_FILE, decisionsFile: DECISIONS_FILE, snapshotFetchedAt: result.snapshotFetchedAt, prs: result.prs });
+			return needsInferenceToolResult(result, SNAPSHOT_FILE, DECISIONS_FILE);
 		},
 	});
 
@@ -867,12 +862,12 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 		async execute(_toolCallId, params) {
 			if (params.operation === "list") {
 				const result = await listDecisions({ loadDecisions });
-				return toolResult(`Loaded ${result.decisions.length} decisions from ${DECISIONS_FILE}.`, { decisionsFile: DECISIONS_FILE, importedFromOld: result.importedFromOld, decisions: result.decisions });
+				return decisionListToolResult(result, DECISIONS_FILE);
 			}
 			if (!Number.isInteger(params.pr) || params.pr <= 0) throw new Error(`operation ${params.operation} requires a positive integer pr`);
 			if (params.operation === "get") {
 				const result = await getDecision(params.pr, { loadDecisions });
-				return toolResult(result.decision ? `Decision for #${params.pr}: ${result.decision.bucket} — ${result.decision.reason}` : `No decision for #${params.pr}.`, { decision: result.decision, decisionsFile: DECISIONS_FILE, importedFromOld: result.importedFromOld });
+				return decisionGetToolResult(result, params.pr, DECISIONS_FILE);
 			}
 			if (params.operation === "delete") {
 				const result = await deleteDecision(params.pr, { loadDecisions, writeDecisions });

@@ -11,6 +11,7 @@ Use this skill to infer PR buckets from the durable Maglev PR Maintainer GitHub 
 ## Operating rules
 
 - Do not call `gh` directly for normal triage.
+- Tool text is model-visible: `maglev_pr_load_metadata` returns full selected PR facts and snapshot identity; `maglev_pr_needs_inference` returns every selected discovery row, and `maglev_pr_decisions` operation `list` returns compact saved queues with reasons and basis. Use decision `get` for exact saved observations. Keep full metadata in the delegated per-PR context unless focused parent inspection is intentionally requested.
 - Do not edit JSON files directly.
 - Do not craft ad-hoc shell/Python/JQ scripts to inspect Maglev state JSON; use `maglev_pr_state_query` when exact joined snapshot/decision/PR Bench fields need to enter model context.
 - Parent-context guardrail: never call `maglev_pr_state_query` with `selection: "all"`, an omitted PR filter, or a multi-PR backlog filter to obtain an overview. Its output includes full commits, reviews, and comments, not a compact summary. Likewise, never bulk-load backlog metadata with `maglev_pr_load_metadata`. Pagination or multiple small batches do not bypass this rule. Parent-side exact-state queries are limited to one disputed PR or explicitly identified Bench reconciliation facts.
