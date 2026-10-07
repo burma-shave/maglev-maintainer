@@ -18,8 +18,13 @@ test("review skills are discoverable through the package skills directory", asyn
 test("code-review skill separates review validation from draft mutation", async () => {
 	const text = await skill("maglev-pr-code-review");
 	assert.match(text, /maglev_pr_code_review.*explicit `workingDirectory`/);
+	assert.match(text, /with `pr` alone by default/);
+	assert.match(text, /Do not inspect or start Benches or require an existing checkout/);
+	assert.match(text, /Do not add instructions limiting checkouts, dependency installation, builds or tests/);
+	assert.match(text, /do not require a reviewed SHA or perform SHA checks/);
 	assert.match(text, /failed, timed-out, or incomplete run is not a clean review/);
-	assert.match(text, /do not create, overwrite, or clear prospective review JSON from a review-only request/);
+	assert.match(text, /Whenever settled actionable PR findings emerge/);
+	assert.match(text, /there is no review-only mode/);
 	assert.match(text, /\.\.\/maglev-pr-review-draft\/SKILL.md/);
 });
 
@@ -29,8 +34,10 @@ test("draft skill accepts settled findings from any source and uses validated to
 		assert.ok(text.includes(tool));
 	}
 	assert.match(text, /Do not invent findings, run a new review/);
+	assert.match(text, /Whenever settled actionable PR review findings emerge in any context/);
 	assert.match(text, /no findings alone is not approval/);
 	assert.match(text, /never use shell redirection, `write`, or `edit`/);
 	assert.match(text, /do not silently attach stale findings to a new commit/);
+	assert.match(text, /For Claude Code reviews, assume findings apply to the PR it reviewed/);
 	assert.match(text, /Never call GitHub write APIs/);
 });

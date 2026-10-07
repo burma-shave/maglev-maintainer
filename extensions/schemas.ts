@@ -65,7 +65,7 @@ export const BenchInspectParamsSchema = Type.Object({
 
 export const CodeReviewParamsSchema = Type.Object({
 	pr: PrNumberSchema,
-	workingDirectory: Type.Optional(Type.String({ description: "Repository checkout directory to run Claude Code from. Defaults to the current working directory." })),
+	workingDirectory: Type.Optional(Type.String({ description: "Optional repository checkout for local review. Omit for remote PR-number-only review from the current directory; no Bench or checkout required." })),
 	timeoutSeconds: Type.Optional(Type.Number({ minimum: 1, maximum: 3600, description: "Claude Code review timeout in seconds. Defaults to 1200 (20 minutes)." })),
 });
 

@@ -346,8 +346,8 @@ Side:
 ```
 ````
 
-For a requested prospective review draft, pass these settled comments, the reviewed
-head SHA, and validation evidence to the packaged draft skill:
+Whenever actionable PR comments are settled, automatically pass them and their
+validation evidence to the packaged draft skill; no separate draft request is needed:
 
 ```text
 /skill:maglev-pr-review-draft <PR> <handoff-dir>/pr-<PR>-actionable-comments.md

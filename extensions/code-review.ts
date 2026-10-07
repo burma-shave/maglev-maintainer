@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { promisify } from "node:util";
-import { BENCH_CHECKOUTS_DIR, BENCH_STATE_DIR } from "./paths.ts";
+import { BENCH_STATE_DIR } from "./paths.ts";
 import { isNotFoundError } from "./utils.ts";
 import { validBenchId } from "./bench-registry.ts";
 
@@ -139,10 +139,12 @@ export async function runClaudeCodeReview(params: CodeReviewParams, partialDeps:
 	const timeoutSeconds = normalizeTimeoutSeconds(params.timeoutSeconds);
 	const benchId = params.benchId ?? `pr-${pr}`;
 	if (!validBenchId(benchId)) throw new Error("Invalid Bench ID.");
-	const requestedWorkingDirectory = params.workingDirectory || `${BENCH_CHECKOUTS_DIR}/${benchId}`;
-	const repositoryRoot = await resolveRepositoryRoot(requestedWorkingDirectory, deps, signal);
+	const requestedWorkingDirectory = params.workingDirectory || deps.processCwd();
+	const repositoryRoot = params.workingDirectory ? await resolveRepositoryRoot(requestedWorkingDirectory, deps, signal) : undefined;
 	const workingDirectory = repositoryRoot ?? requestedWorkingDirectory;
-	const command = ["claude", "--dangerously-skip-permissions", "-p", `/code-review ${pr}`];
+	const command = ["claude", "--dangerously-skip-permissions",
+		"--disallowedTools", "Bash(gh pr comment:*)", "Bash(gh pr review:*)",
+		"-p", `/code-review https://github.com/OneBusAway/maglev/pull/${pr}`];
 	const logPath = `${BENCH_STATE_DIR}/${benchId}/claude-code-review-${isoForPath(deps.now())}.log`;
 
 	try {
@@ -154,8 +156,8 @@ export async function runClaudeCodeReview(params: CodeReviewParams, partialDeps:
 		return missingResult(pr, command, workingDirectory, repositoryRoot, logPath, error);
 	}
 
-	if (!repositoryRoot) {
-		const error = `Working directory is not inside a git repository: ${requestedWorkingDirectory}. Start or reset the PR Bench first, or pass workingDirectory explicitly.`;
+	if (params.workingDirectory && !repositoryRoot) {
+		const error = `Explicit workingDirectory is not inside a git repository: ${requestedWorkingDirectory}. Omit workingDirectory for PR-number-only review.`;
 		const result = { stdout: "", stderr: error, exitCode: null };
 		await deps.writeFile(logPath, buildLog(pr, command, workingDirectory, result, error));
 		return missingResult(pr, command, workingDirectory, undefined, logPath, error);

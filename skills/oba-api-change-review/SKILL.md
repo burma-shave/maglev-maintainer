@@ -171,9 +171,13 @@ A short plain-English summary of what the analysis found. Note anything that is 
 
 ---
 
+### Prospective PR review draft
+
+Whenever this analysis settles actionable findings for an identified PR, automatically follow `../maglev-pr-review-draft/SKILL.md` and save a prospective draft. No separate draft request or `--output` flag is needed. Include the draft path/event or a concrete save blocker in the final response. For branch/working-tree/proposal analysis without an identified PR, report that limitation rather than inventing a PR number.
+
 ### 8. Save the report to a file (only if `--output` was given)
 
-Skip this step entirely if the `--output` flag wasn't present in the argument — the report printed in step 7 is the only output.
+Skip this report-file step if `--output` was not given; the prospective PR draft handoff above still applies.
 
 If `--output <path>` was given, write the exact report content from step 7 to `<path>` verbatim (no truncation or reformatting), creating parent directories if needed.
 

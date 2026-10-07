@@ -101,7 +101,7 @@ PR Bench tools:
 - `maglev_pr_bench_reset` (implemented; dry-run by default, forced checkout to snapshot PR head; dirty-state acknowledgement required)
 - `maglev_pr_bench_close` (implemented; dry-run by default, executes only with explicit `apply` when the plan is ready)
 - `maglev_pr_bench_kickoff` (explicit on-demand instructions/context for the calling agent, never automatic)
-- `maglev_pr_code_review` (headless Claude Code `/code-review` plus captured logs; uses an existing checkout)
+- `maglev_pr_code_review` (headless Claude Code `/code-review` plus captured logs; PR-number-only remote review by default, optional explicit checkout; no Bench lookup)
 
 ### PR Bench start safety model
 

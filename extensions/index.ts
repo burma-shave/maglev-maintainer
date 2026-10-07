@@ -690,17 +690,17 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "maglev_pr_code_review",
 		label: "Maglev PR Code Review",
-		description: "Run Claude Code headlessly from a PR Bench checkout and invoke its /code-review workflow for a Maglev PR.",
-		promptSnippet: "Run Claude Code /code-review for a Maglev PR Bench.",
+		description: "Run Claude Code /code-review for a Maglev PR by number, without requiring a Bench or checkout. Optionally use an explicit checkout.",
+		promptSnippet: "Run a prospective Claude Code review by PR number or from an explicit checkout.",
 		promptGuidelines: [
 			"Use maglev_pr_code_review for the initial PR Bench review instead of manually invoking Claude Code or the claude-code-pr-review skill.",
-			"Run from the PR Bench checkout root; pass workingDirectory when the current working directory is not the checkout.",
+			"Pass pr alone for remote review: no Bench lookup, clone, or checkout is required. Pass workingDirectory explicitly only for checkout-based review.",
 			"This tool captures Claude Code stdout/stderr and writes a full log under the Maglev PR Maintainer bench state directory; it does not submit GitHub reviews.",
 		],
 		parameters: CodeReviewParamsSchema,
-		async execute(_toolCallId, params, signal) {
-			const { bench } = await inspectBench(params.pr);
-			const result = await runClaudeCodeReview({ ...params, workingDirectory: params.workingDirectory ?? bench?.benchPath, benchId: bench?.id }, {
+		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+			const result = await runClaudeCodeReview(params, {
+				processCwd: () => ctx?.cwd ?? process.cwd(),
 				runText: (cmd, args, cwd) => runText(cmd, args, cwd, signal),
 			}, signal);
 			return toolResult(formatCodeReviewResult(result), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, benchStateDir: BENCH_STATE_DIR, ...result });

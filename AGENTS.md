@@ -134,8 +134,12 @@ it must not invent findings or submit reviews. OBA API review is a distinct
 behavior/client/spec review, not a replacement for general code review.
 
 The current explicitly requested `maglev_pr_bench_kickoff` template composes code
-review and draft creation. It is never invoked by start/recovery. Standalone
-review requests do not automatically create, overwrite, or clear drafts.
+review and draft creation. It is never invoked by start/recovery. Whenever settled
+actionable PR review findings emerge in any context (Claude Code, API/spec,
+manual investigation, or maintainer discussion), invoke `maglev-pr-review-draft`
+and save them automatically. No separate draft request or review-only mode exists.
+A review handoff must include the saved draft path/event or a concrete save blocker.
+No findings alone is not approval; failed/incomplete reviews must not clear drafts.
 
 Prospective review JSON must be written through `maglev_pr_review_json`, and
 cleared through its dedicated tool. Keep summary/comments PR-facing; report local

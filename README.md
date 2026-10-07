@@ -46,7 +46,7 @@ avoid simultaneously loading the old global Maglev extension or loose skills.
   - `maglev_pr_review_json_load` (loads a current draft into model context for discussion)
   - `maglev_pr_bench_list`
   - `maglev_pr_bench_inspect`
-  - `maglev_pr_code_review` (headless Claude Code /code-review from an existing checkout; captures a full log)
+  - `maglev_pr_code_review` (headless Claude Code /code-review by PR number, no Bench or checkout required; optional explicit checkout; captures a full log)
   - `maglev_pr_bench_kickoff` (on-demand review instructions and PR context; never run automatically)
   - `maglev_pr_bench_start` (dry-run by default; uses plain checkouts and `gh pr checkout`; can complete safe partial PR Benches)
   - `maglev_pr_bench_reset` (dry-run by default; forced PR checkout to the snapshot head after explicit acknowledgement)
@@ -57,7 +57,7 @@ avoid simultaneously loading the old global Maglev extension or loose skills.
   - `maglev-bug-triage` (issue numbers/URLs or free-text reports; conversation-only verdict, severity, and fix effort)
   - `maglev-pr-triage`
   - `maglev-pr-bench`
-  - `maglev-pr-code-review` (Claude Code review plus focused finding validation; no automatic draft creation)
+  - `maglev-pr-code-review` (Claude Code review plus focused validation and automatic draft handoff for settled findings)
   - `maglev-pr-review-draft` (packages settled findings as prospective review JSON; never submits)
   - `maglev-bench` (branch-based working environments and PR association)
   - `maglev-checkout`
@@ -95,12 +95,13 @@ Use `/maglev-pr-maintainer-status` to check root writability, snapshot availabil
 
 ## Review and draft skills
 
-Use `maglev-pr-code-review` to run Claude Code from an existing PR checkout and
-validate its findings. Use `maglev-pr-review-draft` to create or revise prospective
-review JSON from settled findings, whether they came from Claude Code, an API/spec
-review, manual investigation, or the maintainer. Neither skill starts a Bench or
-submits a GitHub review. A standalone code review does not automatically create,
-overwrite, or clear a draft.
+Use `maglev-pr-code-review` to run Claude Code by PR number (optional explicit
+checkout) and validate its findings. Whenever settled actionable PR findings emerge
+in any context, use `maglev-pr-review-draft` automatically to save prospective
+review JSON, whether they came from Claude Code, API/spec review, manual
+investigation, or the maintainer. No separate draft request or review-only mode
+exists. Report the draft path/event or a concrete save blocker. Neither skill
+starts a Bench or submits a GitHub review. No findings alone is not approval.
 
 The existing explicitly requested `maglev_pr_bench_kickoff` is the composition
 point: its instructions load the code-review skill first, then the draft skill.
