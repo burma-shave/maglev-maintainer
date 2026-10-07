@@ -41,6 +41,7 @@ This package is intentionally not installed or auto-discovered yet. Develop it h
   - `maglev_pr_review_json_load` (loads a current draft into model context for discussion)
   - `maglev_pr_bench_list`
   - `maglev_pr_bench_inspect`
+  - `maglev_pr_code_review` (headless Claude Code /code-review from an existing checkout; captures a full log)
   - `maglev_pr_bench_kickoff` (on-demand review instructions and PR context; never run automatically)
   - `maglev_pr_bench_start` (dry-run by default; uses plain checkouts and `gh pr checkout`; can complete safe partial PR Benches)
   - `maglev_pr_bench_close` (dry-run by default; can execute with explicit `apply`)
@@ -49,6 +50,8 @@ This package is intentionally not installed or auto-discovered yet. Develop it h
   - `maglev-bug-triage` (issue numbers/URLs or free-text reports; conversation-only verdict, severity, and fix effort)
   - `maglev-pr-triage`
   - `maglev-pr-bench`
+  - `maglev-pr-code-review` (Claude Code review plus focused finding validation; no automatic draft creation)
+  - `maglev-pr-review-draft` (packages settled findings as prospective review JSON; never submits)
   - `maglev-bench` (branch-based working environments and PR association)
   - `maglev-checkout`
   - `oba-workspace`
@@ -81,6 +84,20 @@ PR Bench start policy separates review readiness from checkout safety: draft sta
 Current PR Bench support is mostly read-only: list/inspect can find `/var/lib/maglev-pr-maintainer/checkouts/pr-N` checkouts, tmux `pr-N` sessions, the tmux `pi` window, classified dirty state, and snapshot freshness. `maglev_pr_bench_start` defaults to a dry-run start/reuse safety plan; `apply` creates a plain checkout with `gh repo clone`, checks out the PR with `gh pr checkout --branch pr-N`, verifies the checkout HEAD against the snapshot, and starts tmux with a `pi` window running `pi --name "Review PR #N"` from the PR Bench checkout. Starting or recovering a Bench does not generate a kickoff file, submit an initial user prompt, or automatically run a review. An agent may pass optional free-form `context` to `maglev_pr_bench_start` to hand off goals, findings, constraints, and references. When a new Pi window is launched, the caller's context is saved to a unique `benches/pr-N/context-<id>.md` file and loaded via `--append-system-prompt`; this supplies background context without triggering an agent turn. Blank context is ignored. Dry runs write no files. Context is refused when reusing an existing Pi window, rather than silently dropped or sent as terminal input. On explicit request, `maglev_pr_bench_kickoff` returns the read-only review instructions and PR snapshot/triage context to the calling agent, with optional additional `context`. It does not send input to another Pi session or execute the review itself; the calling agent follows the instructions using `maglev_pr_code_review` from the specified checkout. Bench start no longer accepts `kickoff` or `kickoffContext` options. It can also complete safe partial PR Benches, such as an existing checkout missing the PR branch, tmux session, or `pi` window. `gh pr checkout` handles same-repo and fork PR checkout/push configuration inside the independent PR Bench checkout. `maglev_pr_bench_close` defaults to a dry-run close plan with warnings/refusals and executes only with explicit `apply` after required warning acknowledgements. Use `/maglev-pr-benches`, optionally with PR numbers, to print the same data as a session report that does not enter model context.
 
 Use `/maglev-pr-maintainer-status` to check root writability, snapshot availability/count, decision file status, active PR Bench count, `gh auth status`, and `tmux` availability.
+
+## Review and draft skills
+
+Use `maglev-pr-code-review` to run Claude Code from an existing PR checkout and
+validate its findings. Use `maglev-pr-review-draft` to create or revise prospective
+review JSON from settled findings, whether they came from Claude Code, an API/spec
+review, manual investigation, or the maintainer. Neither skill starts a Bench or
+submits a GitHub review. A standalone code review does not automatically create,
+overwrite, or clear a draft.
+
+The existing explicitly requested `maglev_pr_bench_kickoff` is the composition
+point: its instructions load the code-review skill first, then the draft skill.
+Starting/recovering a Bench still runs neither automatically; startup context is
+background only. Run `/reload` to discover the new skills.
 
 ## Privileged handoff scripts
 

@@ -20,6 +20,10 @@ test("on-demand kickoff returns review instructions with PR, decision, and calle
 	assert.match(result.prompt, /Ready for ordering review/);
 	assert.match(result.prompt, /Focus on stop ordering tests\./);
 	assert.match(result.prompt, /maglev_pr_code_review/);
+	assert.match(result.prompt, /standalone `maglev-pr-code-review` and `maglev-pr-review-draft` skills/);
+	assert.match(result.prompt, /not run automatically when a Bench starts or recovers/);
+	assert.match(result.prompt, /maglev_pr_review_json_clear/);
+	assert.match(result.prompt, /failed or incomplete review does not justify clearing/);
 	assert.match(result.prompt, /workingDirectory.*\/checkouts\/pr-1416/);
 	assert.doesNotMatch(result.prompt, /\{\{[A-Za-z0-9_]+\}\}/);
 	assert.equal("kickoffPromptPath" in result, false);

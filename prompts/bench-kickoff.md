@@ -2,12 +2,14 @@ Review PR #{{prNumber}} for OneBusAway/maglev using the PR Bench checkout at `{{
 
 This is a review-only kickoff pass: do not implement fixes or change production code. Do not commit, push, install dependencies, or run formatters. Runtime validation is allowed, including running existing tests and creating temporary test-only files, fixtures, or diagnostic harnesses to reproduce findings. Inspect the checkout state first, preserve all pre-existing changes, and remove only your temporary validation changes afterward. Report the tests run, their results, and any validation changes that could not be cleaned up safely. Package prospective PR review findings only via the `maglev_pr_review_json` tool in the centralized Maglev PR Maintainer review JSON directory; never write review JSON with shell redirection, `write`, or `edit`.
 
-First action:
+Explicit combined review workflow:
+- This kickoff composes the standalone `maglev-pr-code-review` and `maglev-pr-review-draft` skills. Read both skills through Pi's available skill locations before proceeding. It is not run automatically when a Bench starts or recovers.
+- Follow `maglev-pr-code-review` first: inspect the checkout, run the review, and validate findings. Then follow `maglev-pr-review-draft` to package settled actionable findings. This explicit kickoff requests both phases; a standalone code-review request does not authorize draft creation.
 - Use the `maglev_pr_code_review` tool for PR #{{prNumber}} with `workingDirectory` set to `{{benchPath}}`.
 - Do not invoke Claude Code directly, invoke the `claude-code-pr-review` skill, or perform a separate manual Pi review unless the tool fails. After the delegated review completes, focused code inspection and runtime tests to validate its findings are allowed; this is not a separate initial review.
 - Validate concrete findings where feasible before packaging them, using runtime reproductions when practical. If validation is blocked or incomplete, state why and distinguish code-inspection evidence from runtime confirmation.
 - After Claude Code exits and any focused validation completes, summarize the results concisely for the maintainer, including blocking errors if any.
-- If Claude Code identifies concrete actionable findings suitable for PR review comments, package those findings with `maglev_pr_review_json` before the final summary. Do not submit a GitHub review.
+- If Claude Code identifies concrete actionable findings suitable for PR review comments, package those findings with `maglev_pr_review_json` before the final summary. If the settled outcome is no prospective review, use `maglev_pr_review_json_clear`; do not automatically approve. A failed or incomplete review does not justify clearing an existing draft. Do not submit a GitHub review.
 
 Goal:
 - Delegate the initial review to Claude Code now; do not implement fixes.
