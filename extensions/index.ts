@@ -859,7 +859,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 		promptSnippet: "Read or update durable Maglev PR triage decisions.",
 		promptGuidelines: ["Use maglev_pr_decisions to persist Maglev PR buckets; do not edit decision JSON files directly.", "Use absolute dates in durable decision text; avoid relative temporal phrases like today, yesterday, recently, or this morning."],
 		parameters: DecisionsParamsSchema,
-		async execute(_toolCallId, params) {
+		async execute(_toolCallId, params, signal) {
 			if (params.operation === "list") {
 				const result = await listDecisions({ loadDecisions });
 				return decisionListToolResult(result, DECISIONS_FILE);
@@ -870,12 +870,12 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 				return decisionGetToolResult(result, params.pr, DECISIONS_FILE);
 			}
 			if (params.operation === "delete") {
-				const result = await deleteDecision(params.pr, { loadDecisions, writeDecisions });
+				const result = await deleteDecision(params.pr, { decisionsFile: DECISIONS_FILE, signal, loadDecisions, writeDecisions });
 				return toolResult(result.deleted ? `Deleted decision for #${params.pr}.` : `No decision existed for #${params.pr}; wrote normalized decisions file.`, { decisionsFile: DECISIONS_FILE, deleted: result.deleted, pr: result.pr });
 			}
 			if (params.operation === "upsert") {
 				if (!params.decision) throw new Error("operation upsert requires decision");
-				const decision = await saveDecision(params.pr, params.decision, { loadDecisions, writeDecisions, loadSnapshot });
+				const decision = await saveDecision(params.pr, params.decision, { decisionsFile: DECISIONS_FILE, signal, loadDecisions, writeDecisions, loadSnapshot });
 				return toolResult(`Saved decision for #${params.pr}: ${decision.bucket} — ${decision.reason}`, { decisionsFile: DECISIONS_FILE, decision });
 			}
 			throw new Error(`Unknown decision operation: ${(params as { operation: string }).operation}`);

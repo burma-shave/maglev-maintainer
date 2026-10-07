@@ -1,4 +1,5 @@
 import { VALID_BUCKETS, VALID_BUCKET_SET } from "./constants.ts";
+import { withDecisionFileLock } from "./decision-lock.ts";
 import type { DecisionBasis, DecisionsFile, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
 import { validIsoTimestamp } from "./utils.ts";
 
@@ -12,6 +13,8 @@ export interface DecisionInput {
 }
 
 export interface DecisionStoreDeps {
+	decisionsFile: string;
+	signal?: AbortSignal;
 	loadDecisions: () => Promise<{ file: DecisionsFile; importedFromOld: boolean }>;
 	writeDecisions: (file: DecisionsFile) => Promise<void>;
 	loadSnapshot?: () => Promise<SnapshotFile>;
@@ -70,14 +73,6 @@ function assertPositivePr(pr: number): void {
 	if (!Number.isInteger(pr) || pr <= 0) throw new Error("PR number must be a positive integer");
 }
 
-let decisionMutationQueue: Promise<void> = Promise.resolve();
-
-async function withDecisionMutationLock<T>(fn: () => Promise<T>): Promise<T> {
-	const run = decisionMutationQueue.then(fn, fn);
-	decisionMutationQueue = run.then(() => undefined, () => undefined);
-	return run;
-}
-
 export function relativeTimePhraseInDecisionText(text: string): string | undefined {
 	for (const pattern of RELATIVE_TIME_PATTERNS) {
 		const match = text.match(pattern);
@@ -108,15 +103,16 @@ export async function getDecision(pr: number, deps: Pick<DecisionStoreDeps, "loa
 	};
 }
 
-export async function deleteDecision(pr: number, deps: Pick<DecisionStoreDeps, "loadDecisions" | "writeDecisions">): Promise<DeleteDecisionResult> {
+export async function deleteDecision(pr: number, deps: Pick<DecisionStoreDeps, "decisionsFile" | "signal" | "loadDecisions" | "writeDecisions">): Promise<DeleteDecisionResult> {
 	assertPositivePr(pr);
-	return withDecisionMutationLock(async () => {
+	return withDecisionFileLock(deps.decisionsFile, async () => {
 		const loaded = await deps.loadDecisions();
 		const byPr = decisionMap(loaded.file.decisions);
 		const deleted = byPr.delete(pr);
+		deps.signal?.throwIfAborted();
 		await deps.writeDecisions({ ...loaded.file, decisions: [...byPr.values()] });
 		return { pr, deleted };
-	});
+	}, { signal: deps.signal });
 }
 
 export async function saveDecision(pr: number, input: DecisionInput, deps: DecisionStoreDeps): Promise<TriageDecision> {
@@ -128,7 +124,7 @@ export async function saveDecision(pr: number, input: DecisionInput, deps: Decis
 	const observations = input.observations?.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim());
 	for (const [index, observation] of observations?.entries() ?? []) assertDurableDecisionText(`observation ${index + 1}`, observation);
 
-	return withDecisionMutationLock(async () => {
+	return withDecisionFileLock(deps.decisionsFile, async () => {
 		const loaded = await deps.loadDecisions();
 		const byPr = decisionMap(loaded.file.decisions);
 		let snapshot: SnapshotFile | undefined;
@@ -158,7 +154,8 @@ export async function saveDecision(pr: number, input: DecisionInput, deps: Decis
 			},
 		};
 		byPr.set(pr, decision);
+		deps.signal?.throwIfAborted();
 		await deps.writeDecisions({ ...loaded.file, decisions: [...byPr.values()] });
 		return decision;
-	});
+	}, { signal: deps.signal });
 }

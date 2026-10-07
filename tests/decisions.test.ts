@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { deleteDecision, decisionMap, getDecision, listDecisions, normalizeDecision, relativeTimePhraseInDecisionText, saveDecision } from "../extensions/decisions.ts";
 import { makeDecision, makeDecisionsFile, makeSnapshotFile, makeSnapshotPr } from "../testdata/fixtures.ts";
 
@@ -44,12 +47,15 @@ test("normalizeDecision rejects invalid bucket, PR number, reason, and timestamp
 	assert.equal(normalizeDecision({ pr: 1, bucket: "review", reason: "x", decidedAt: "not a date" }), undefined);
 });
 
-test("decision operations list, get, delete, and save structured decisions", async () => {
+test("decision operations list, get, delete, and save structured decisions", async (t) => {
+	const root = await mkdtemp(join(tmpdir(), "maglev-decisions-"));
+	t.after(() => rm(root, { recursive: true, force: true }));
 	let file = makeDecisionsFile([
 		makeDecision(7, { bucket: "watch", reason: "wait" }),
 		makeDecision(3, { bucket: "review", reason: "ready" }),
 	]);
 	const deps = {
+		decisionsFile: join(root, "decisions.json"),
 		loadDecisions: async () => ({ file, importedFromOld: false }),
 		writeDecisions: async (next: typeof file) => { file = next; },
 		loadSnapshot: async () => makeSnapshotFile([
@@ -88,9 +94,12 @@ test("decision operations list, get, delete, and save structured decisions", asy
 	});
 });
 
-test("saveDecision rejects relative time phrases in durable text", async () => {
+test("saveDecision rejects relative time phrases in durable text", async (t) => {
+	const root = await mkdtemp(join(tmpdir(), "maglev-decisions-"));
+	t.after(() => rm(root, { recursive: true, force: true }));
 	let file = makeDecisionsFile([]);
 	const deps = {
+		decisionsFile: join(root, "decisions.json"),
 		loadDecisions: async () => ({ file, importedFromOld: false }),
 		writeDecisions: async (next: typeof file) => { file = next; },
 		now: () => new Date("2026-01-06T00:00:00Z"),
@@ -108,9 +117,12 @@ test("saveDecision rejects relative time phrases in durable text", async () => {
 	assert.equal(file.decisions.length, 0);
 });
 
-test("concurrent saveDecision calls are serialized so decisions are not lost", async () => {
+test("concurrent saveDecision calls are serialized so decisions are not lost", async (t) => {
+	const root = await mkdtemp(join(tmpdir(), "maglev-decisions-"));
+	t.after(() => rm(root, { recursive: true, force: true }));
 	let file = makeDecisionsFile([]);
 	const deps = {
+		decisionsFile: join(root, "decisions.json"),
 		loadDecisions: async () => ({ file, importedFromOld: false }),
 		writeDecisions: async (next: typeof file) => {
 			await delay(5);
