@@ -177,7 +177,7 @@ Skip this step entirely if the `--output` flag wasn't present in the argument â€
 
 If `--output <path>` was given, write the exact report content from step 7 to `<path>` verbatim (no truncation or reformatting), creating parent directories if needed.
 
-If `--output` was given with no path, use the `maglev_pr_workspace_context` result. Prefer `<artifacts.targetReportsDir>/oba-api-change-review-<slug>-<timestamp>.md` when `targetReportsDir` is available. If no target report directory is available, fall back to `tmp/oba-api-change-review/<slug>-<timestamp>.md` in the current checkout.
+If `--output` was given with no path, follow `../librarian/SKILL.md` and use the `maglev_pr_workspace_context` result. Use `<artifacts.targetReportsDir>/oba-api-change-review-<slug>-<timestamp>.md` for the applicable PR or branch Bench; an associated branch Bench keeps its original reports path. With no applicable Bench, use `<maintainerRoot>/plans/oba-api-change-review-<slug>-<timestamp>.md`. Do not default to checkout-local `tmp/` or start a Bench merely to store a report. Preserve an explicitly requested output destination, subject to repository instructions.
 
 Create the chosen parent directory before writing.
 

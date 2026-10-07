@@ -23,7 +23,16 @@ Generated reports and handoffs should prefer `artifacts.targetReportsDir`, norma
 /var/lib/maglev-pr-maintainer/benches/pr-<PR>/reports
 ```
 
-When no target PR is known, skills may fall back to repo-local `tmp/...` paths.
+For an unassociated branch Bench, pass `benchId` or use detected current Bench
+context and use its returned `artifacts.targetReportsDir`. PR association preserves
+that directory. With no applicable Bench, use `<maintainerRoot>/plans/` for saved
+reports/handoffs. Follow `librarian`, respect explicit output destinations, and do
+not default to checkout-local `tmp/` or start a Bench solely for storage.
+
+Review production and draft packaging are independent: settled findings from
+these API reviews can feed `maglev-pr-review-draft` when a draft is requested.
+That skill writes through `maglev_pr_review_json`; no GitHub review is submitted.
+For a separately requested publication script, use `privileged-handoff-script`.
 
 ## Companion repos
 

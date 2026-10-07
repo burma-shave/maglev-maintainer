@@ -53,6 +53,9 @@ test("generated scripts use the configured shared root, independently of Bench",
 	const context = buildWorkspaceContext({ pr: 7 }, { ...paths, maintainerRoot: "/custom/maintainer" });
 	assert.equal(context.artifacts.generatedScriptsDir, "/custom/maintainer/scripts");
 	assert.match(context.conventions.generatedScripts, /0755/);
+	assert.match(context.conventions.generatedScripts, /Human execution performs listed writes immediately/);
+	assert.match(context.conventions.generatedScripts, /generation never authorizes execution/);
+	assert.match(context.conventions.generatedReports, /Without a target Bench, use <maintainerRoot>\/plans/);
 	assert.equal(buildWorkspaceContext({}, paths).artifacts.generatedScriptsDir, "/var/lib/maglev-pr-maintainer/scripts");
 });
 

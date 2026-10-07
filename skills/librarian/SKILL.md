@@ -13,7 +13,8 @@ Do not turn a request to find or discuss a document into an unsolicited move.
 ## Resolve the workspace
 
 1. Call `maglev_pr_workspace_context` first. Pass `pr` when the user supplies a
-   PR number; otherwise use the returned current PR Bench context if available.
+   PR number, or `benchId` for a supplied branch Bench ID (mutually exclusive).
+   Otherwise use the returned current Bench context if it matches the subject.
 2. Use the returned maintainer root and artifact paths, not hard-coded workspace
    assumptions. The default root is `/var/lib/maglev-pr-maintainer`, but it may
    be configured elsewhere.
@@ -26,7 +27,8 @@ Do not turn a request to find or discuss a document into an unsolicited move.
 | Document | Location |
 | --- | --- |
 | General implementation/release plans, cross-PR design notes, long-lived maintainer planning | `<maintainerRoot>/plans/<topic>.md` |
-| PR-specific plans, review notes, investigation reports, test summaries, and handoffs | Returned `artifacts.targetReportsDir`, normally `<maintainerRoot>/benches/pr-<PR>/reports/<topic>.md` |
+| PR- or branch-Bench-specific plans, review notes, investigation reports, test summaries, and handoffs | Returned `artifacts.targetReportsDir`; normally `<maintainerRoot>/benches/<bench-id>/reports/<topic>.md`. PR association preserves an existing branch Bench's ID/path. |
+| Reports or handoffs without an applicable Bench | `<maintainerRoot>/plans/<topic>.md`; never a default checkout-local `tmp/` fallback |
 | Documentation explicitly intended for a repository commit | Follow that repository's documentation instructions and existing layout |
 | Canonical wiki specifications or approved wiki updates | Follow the relevant wiki skill and repository instructions |
 | Prospective GitHub review JSON and triage state | Use their dedicated maintainer tools, not arbitrary Markdown/JSON files |
@@ -37,18 +39,19 @@ The existing general release plan is:
 <maintainerRoot>/plans/maglev-release-plan.md
 ```
 
-With the default configuration, the two working-document homes are:
+With the default configuration, working-document homes include:
 
 ```text
 /var/lib/maglev-pr-maintainer/plans/
 /var/lib/maglev-pr-maintainer/benches/pr-<PR>/reports/
+/var/lib/maglev-pr-maintainer/benches/branch-<slug>-<hash>/reports/
 ```
 
 A general plan remains in `plans/` even if the session happens to run inside a
-PR checkout. A plan solely about that PR belongs with its Bench reports.
-Bench metadata and generated runtime files live elsewhere under the per-PR
-Bench directory; do not overwrite tool-owned files such as logs,
-state, or runtime configuration.
+Bench checkout. A plan solely about that Bench/PR belongs with its reports.
+Resolving a report directory does not require starting a Bench. Runtime files
+live under `<maintainerRoot>/runtimes/`; metadata, logs, state, and runtime
+configuration are tool-owned and must not be overwritten as working documents.
 
 Respect an explicitly requested destination, subject to repository instructions.
 Explain any conflict before proceeding. Local plans are not automatically
@@ -56,7 +59,7 @@ canonical specs or wiki updates just because they contain design decisions.
 
 ## Find, write, and maintain documents
 
-- Search the relevant plans or per-PR reports directory before creating a new
+- Search the relevant plans or per-Bench reports directory before creating a new
   document. Read and update an existing matching document rather than making
   competing copies. Use descriptive lowercase kebab-case filenames.
 - Use `read` to inspect documents, `edit` for targeted updates, and `write` for
@@ -71,7 +74,7 @@ canonical specs or wiki updates just because they contain design decisions.
   deletion/change before moving it unless that change was explicitly requested.
 - Leave editor swap/lock files and unrelated user changes untouched. If a file
   appears open in an editor, mention that its new path should be reopened.
-- Bench lifecycle cleanup may remove per-PR artifacts. Keep long-lived,
+- Bench lifecycle cleanup may remove per-Bench artifacts. Keep long-lived,
   cross-PR documents in `plans/`; ask before archiving or moving Bench reports
   when closing a Bench. Do not initiate Bench cleanup from this skill.
 - Finish with the exact document path and a brief summary of what changed.

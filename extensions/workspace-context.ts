@@ -120,8 +120,8 @@ export function buildWorkspaceContext(input: WorkspaceContextInput, paths: Works
 		conventions: {
 			prBenchNamePattern: "pr-<PR>",
 			branchBenchNamePattern: "branch-<slug>-<hash>",
-			generatedReports: "Prefer artifacts.targetReportsDir for Bench reports and handoffs; PR association never changes artifact paths.",
-			generatedScripts: "Store privileged handoff scripts in artifacts.generatedScriptsDir with mode 0755; preview by default and require explicit apply/create to mutate external systems.",
+			generatedReports: "Use artifacts.targetReportsDir for PR or branch Bench reports and handoffs; association never changes paths. Without a target Bench, use <maintainerRoot>/plans, not checkout-local tmp. Respect explicit output destinations.",
+			generatedScripts: "Store privileged handoff scripts in artifacts.generatedScriptsDir with mode 0755. Human execution performs listed writes immediately unless preview/apply gates were explicitly requested; generation never authorizes execution.",
 		},
 	};
 }

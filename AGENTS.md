@@ -1,35 +1,21 @@
 # AGENTS.md
 
-This project contains the new **Maglev PR Maintainer** Pi package. It is being developed as a replacement/unification of the existing Maglev PR triage TUI, triage skill, PRRS/worktree skill, and helper scripts.
+## Project and development scope
 
-Err on the side of reading more context while this package is under active design. Prefer understanding the existing implementation and workflow before making changes.
+**Maglev PR Maintainer** is the Pi package in this repository for maintaining
+`OneBusAway/maglev`. It unifies metadata triage, Bench lifecycle, review tools,
+API/spec skills, and durable maintainer state. Read existing code and workflow
+context before changing it. See `README.md` for the current resource/module
+inventory and `docs/design.md` for architecture and explicitly planned UI work.
 
-## Core naming
+Develop in the active repository checkout, not a hard-coded workspace path.
+On this host that checkout is `/home/pi/maglev-pr-maintainer`; other installations
+may differ. Maintainer state and target Maglev source are separate from package
+source. Use `maglev_pr_workspace_context` for configured paths, and
+`maglev_pr_checkout` when target source is needed outside a Bench.
 
-- **Maglev PR Maintainer**: the top-level package/workflow/project.
-- **Bench**: one branch-based working environment with a stable identity, checkout, tmux/Pi session, startup context, and artifacts.
-- **PR Bench**: a Bench specialized by an optional PR association. Lifecycle is shared, not duplicated.
-- Existing PR Benches consist of:
-  - a maintainer-root checkout path, normally `/var/lib/maglev-pr-maintainer/checkouts/pr-<PR>`
-  - a local branch `pr-<PR>`
-  - a tmux session `pr-<PR>`
-  - a tmux window named `pi` running Pi from the checkout root without an initial user prompt or automatic kickoff; agents may optionally supply background context via Bench start
-
-Use **Bench** generally and **PR Bench** for PR-specialized workflows. Avoid using “worktree” as the primary term. Branch Bench IDs are `branch-<slug>-<hash>`, independent of Git branch names; definitions live at `benches/<id>/bench.json`. Associating a PR preserves identity and all paths. General `maglev_bench_*` tools and existing PR tools share the same lifecycle implementation. Cleanup must protect local-only committed work as well as dirty/ignored files; a clean checkout is not necessarily safe to delete.
-
-## Development scope
-
-Implement the new package under:
-
-```text
-/workspace/agentic/maglev-pr-maintainer
-```
-
-Do not edit the old global extension, old skills, or old helper scripts unless the user explicitly asks. Treat them as read-only references during development.
-
-## Read-only reference files
-
-Use these files for context and migration reference:
+Do not edit old global extensions, skills, or helper scripts without an explicit
+request. Historical migration references included:
 
 ```text
 /home/ubuntu/.pi/agent/extensions/maglev-pr-triage-tui.ts
@@ -40,135 +26,82 @@ Use these files for context and migration reference:
 /workspace/bin/prrs-teardown
 ```
 
-The target repository being maintained is `OneBusAway/maglev`; PR Maintainer commands should use explicit GitHub repo arguments and must not require a separate `/workspace/maglev` checkout.
+Those paths are historical, not prerequisites, and are absent on this host.
+The package implements lifecycle operations directly; it does not wrap those
+helpers or require a separate `/workspace/maglev` checkout. GitHub commands
+must name the repository explicitly.
 
-The old global Pi settings currently load skills from:
+## Naming and Bench lifecycle
 
-```text
-/workspace/agentic/skills
-```
+- **Bench**: a branch-based environment with stable identity, independent plain
+  checkout, tmux/Pi session, background startup context, and artifacts.
+- **PR Bench**: a Bench optionally associated with a PR, using the same lifecycle.
+- Legacy PR Bench identities are `pr-<PR>`; branch Bench IDs are
+  `branch-<slug>-<hash>`, independent of Git branch names. Definitions live at
+  `benches/<id>/bench.json` under the maintainer root.
+- Association preserves identity, branch, paths, session, and artifacts.
+- New Pi windows run from the checkout root without an initial task or automatic
+  kickoff. Optional `context` is background via `--append-system-prompt`, only
+  when launching a new Pi window; existing sessions are not modified.
 
-and may auto-discover global extensions from:
+Use Bench terminology, not “worktree,” as the primary workflow name. General
+`maglev_bench_*` tools and PR-specialized tools share the lifecycle implementation.
 
-```text
-~/.pi/agent/extensions
-```
+Start, reset, association, and close tools default to plans. Apply only on an
+explicit request. Inspect first, show warnings, and preserve identity/path
+refusals. Draft/conflicted/failing/pinned PRs, stale/missing triage inference,
+and absent stack-parent Benches are informational, not start blockers. Stale or
+incomplete snapshots and existing HEAD mismatches still require acknowledgement.
 
-When testing the new package in isolation, avoid loading the old global resources.
+Close protects dirty/ignored files and local-only commits on live refs (including
+HEAD, other branches, and stash), not just checkout cleanliness. Remote-ref
+checks are cached; fetch/prune and inspect again before deletion unless network
+calls are prohibited. A missing upstream alone is not unsafe if remote refs
+preserve all live local commits. File/head overrides do not acknowledge committed
+work loss. `removeCheckout: false` stops tmux while preserving checkout/artifacts.
 
-## Suggested isolated development session
+Reset currently checks dirty files but does **not** protect unpushed committed
+work (open finding F1). Preserve displaced work before reset; do not describe
+reset as having close's commit safeguards.
 
-From the new package directory:
+## Architecture and canonical state
 
-```bash
-cd /workspace/agentic/maglev-pr-maintainer
-pi --no-extensions --no-skills \
-  -e ./extensions/index.ts \
-  --skill ./skills \
-  --name "Develop Maglev PR Maintainer"
-```
+Keep deterministic domain functions separate from Pi registration/adapters.
+Tools, commands, TUI, and skills are clients of the same domain functions.
+Skills provide policy/inference, not alternate JSON mutation implementations.
 
-This keeps old `/maglev-prs` and old Maglev PR skills from conflicting while still allowing the reference files above to be read from disk.
+Canonical state is durable files under `/var/lib/maglev-pr-maintainer` by default,
+overridden by `MAGLEV_PR_MAINTAINER_ROOT`. Pi custom entries may hold display-only
+reports, never canonical workflow state.
 
-## Package structure
+### GitHub snapshot: `state/github-snapshot.json`
 
-```text
-maglev-pr-maintainer/
-├── AGENTS.md
-├── README.md
-├── package.json
-├── docs/
-│   └── design.md
-├── extensions/
-│   └── index.ts
-├── scripts/
-├── skills/
-│   ├── maglev-pr-bench/
-│   │   └── SKILL.md
-│   └── maglev-pr-triage/
-│       └── SKILL.md
-└── testdata/
-```
+- Written only by metadata refresh; facts derived from GitHub only.
+- No inferred buckets, manual overrides, session entries, or local Bench state.
+- Includes PR refs/head, activity, discussions/reviews, checks, files, and
+  GitHub-derived meaningful activity/stack metadata.
+- Check snapshot staleness before metadata-dependent work; refresh when needed
+  unless live GitHub calls are prohibited.
 
-## Desired architecture
+### Decisions: `state/decisions.json`
 
-Create one coherent Pi package with:
+- Written through `maglev_pr_decisions`, never ad-hoc scripts.
+- Buckets: `review | chase | pinned | watch`; `triage` and `bench` are display-only.
+- Preserve unrelated decisions; validate timestamps and durable reason text.
+- Use absolute dates in reasons/observations, not “today” or “recently.”
+- Upsert/delete hold a filesystem lock across the complete read-modify-write,
+  then write atomically. See `docs/decision-mutation-locking.md` for contention,
+  cancellation, failure, and manual orphan recovery. Never steal a lock by age.
 
-- deterministic extension tools
-- deterministic TUI commands/components
-- LLM-facing skills that use those tools
-- durable JSON files for workflow state
-- no canonical state stored in Pi session custom entries
-
-The TUI and skills should be clients of the same deterministic functions/tools, not separate implementations of stale-row logic or JSON mutation.
-
-## State files
-
-Use durable state files under the shared maintainer root, `/var/lib/maglev-pr-maintainer` by default. Developers may override this with `MAGLEV_PR_MAINTAINER_ROOT`.
-
-### GitHub snapshot
-
-```text
-/var/lib/maglev-pr-maintainer/state/github-snapshot.json
-```
-
-Purpose: facts-only metadata downloaded from GitHub.
-
-Rules:
-
-- Written only by the metadata refresh tool.
-- Contains only GitHub-derived information.
-- No inference decisions.
-- No manual bucket overrides.
-- No PR Bench/local machine state.
-- No session custom-entry data.
-
-Expected content includes:
-
-- repo
-- schema version
-- fetchedAt
-- PR list
-- title, author, URL
-- base/head refs
-- created/updated/closed/merged state
-- reviewDecision
-- mergeStateStatus
-- statusCheckRollup-derived bad checks
-- commits or compact commit summary
-- reviews/comments needed for meaningful activity and chase detection
-- files changed
-- stack metadata derivable from branch refs or shared commits
-- normalized `meaningfulUpdatedAt` may be included if it is derived only from GitHub facts
-
-### Decisions
-
-```text
-/var/lib/maglev-pr-maintainer/state/decisions.json
-```
-
-Purpose: inference/user decisions about PR triage state.
-
-Rules:
-
-- Written through the decision tool, not by ad-hoc shell/Python/JQ scripts in skill instructions.
-- Read by both the TUI and skills/tools.
-- Preserve decisions for PRs not being updated.
-- Validate bucket names and timestamps.
-- Atomic writes preferred.
-
-Suggested decision shape:
+Example:
 
 ```json
 {
   "pr": 1362,
   "bucket": "watch",
   "priority": 3,
-  "reason": "chased today; wait for contributor update",
-  "observations": [
-    "requested changes still open",
-    "latest human comment is maintainer chase"
-  ],
+  "reason": "maintainer chased on 2026-09-05; wait for contributor update",
+  "observations": ["requested changes still open"],
   "decidedAt": "2026-09-05T01:24:43.957Z",
   "source": "skill",
   "basis": {
@@ -179,197 +112,87 @@ Suggested decision shape:
 }
 ```
 
-Buckets:
+## Workflow responsibilities
 
-```text
-review | chase | pinned | watch
-```
+### Triage
 
-Potential display-only buckets may include:
+Use compact needs-inference/decision outputs in the parent. Delegate one PR per
+fresh-context `maglev-pr-maintainer.pr-triage-analyst`; that child loads only its
+assigned PR using `maglev_pr_load_metadata` and returns a recommendation/basis.
+The parent owns ordering, decisions, persistence, and final acceptance. Intentional
+focused parent inspection of one selected PR remains supported. Do not use live
+`gh` calls for normal snapshot triage or bulk-load discussions into the parent.
 
-```text
-triage | bench
-```
+Meaningful activity excludes bot/status churn. Current head-change timestamp and
+basis-stamping limitations remain open findings F3/F4; do not claim they are fixed.
 
-but those should be computed by tools/TUI from facts + decisions + local PR Bench state, not stored as normal decision buckets.
+### Reviews and drafts
 
-## Tool surface plan
+`maglev-pr-code-review` runs the existing Claude Code tool and validates findings.
+`maglev-pr-review-draft` packages already-settled findings from any review source;
+it must not invent findings or submit reviews. OBA API review is a distinct
+behavior/client/spec review, not a replacement for general code review.
 
-Implement custom tools in the extension for deterministic state management and PR Bench operations.
+The current explicitly requested `maglev_pr_bench_kickoff` template composes code
+review and draft creation. It is never invoked by start/recovery. Standalone
+review requests do not automatically create, overwrite, or clear drafts.
 
-### GitHub / triage tools
+Prospective review JSON must be written through `maglev_pr_review_json`, and
+cleared through its dedicated tool. Keep summary/comments PR-facing; report local
+housekeeping separately. Claude command/plugin publication behavior is an open
+deployment verification issue (F7), not guaranteed by a local review wrapper.
 
-- `maglev_pr_refresh_metadata`
-  - Fetch all open `OneBusAway/maglev` PR metadata from GitHub.
-  - Write the facts-only snapshot file.
-  - Return a compact summary.
+### Documents and privileged handoffs
 
-- `maglev_pr_load_metadata`
-  - Read selected PR metadata from the snapshot file.
-  - Support loading PRs by explicit number list or by `needs-inference`.
-  - Return enough structured data for inference to triage without live GitHub calls.
+Follow `librarian` for working documents: returned `artifacts.targetReportsDir`
+for PR or branch Bench reports; `<maintainerRoot>/plans/` when no Bench applies.
+Respect explicitly requested destinations. Repository documentation intended for
+commit belongs in the repository. Do not default reports to checkout-local `tmp/`.
 
-- `maglev_pr_needs_inference`
-  - Read GitHub snapshot + decisions file.
-  - No live GitHub calls.
-  - Return PRs with no decision or stale decisions.
-  - Staleness should be based on GitHub-derived meaningful activity from the snapshot, not live API state.
-  - Meaningful activity is the latest of: last commit, last non-bot review, and last non-bot comment. Bot/status churn alone should not stale a decision.
+Generated privileged scripts belong in `artifacts.generatedScriptsDir`, mode
+`0755`. Follow `privileged-handoff-script`: human execution performs writes
+immediately unless preview/apply gates were explicitly requested. Generation and
+syntax validation never authorize executing the script or publishing to GitHub.
 
-- `maglev_pr_decisions`
-  - Read/write decisions file.
-  - Operations: `list`, `get`, `upsert`, `delete`.
-  - Validate buckets: `review`, `chase`, `pinned`, `watch`.
-  - Add/update `decidedAt` and `basis` consistently.
-  - Preserve unrelated decisions.
+## Current UI versus planned UI
 
-### PR Bench tools
+`/maglev-prs` and `/maglev-pr-benches` are read-only transcript reports with optional
+PR filters, not interactive refresh/marking/tab queues. The review JSON viewer and
+PR lifecycle confirmation flows are implemented. A queue refresh key, TRIAGE tab,
+and manual marking UI remain planned; use tools/skills for those operations now.
 
-- `maglev_pr_bench_kickoff`
-  - Load the read-only review kickoff instructions and PR context for the calling agent on explicit request.
-  - Never called automatically by Bench start/recovery; does not write prompt files or send input to tmux.
+## Testing and isolated development
 
-- `maglev_pr_bench_list`
-  - List active/local PR Benches.
-  - Include branch, tmux session, path, local head, dirty state, freshness if snapshot has the PR head.
-
-- `maglev_pr_bench_inspect`
-  - Inspect one PR Bench.
-  - Do not mutate state.
-
-- `maglev_pr_bench_start`
-  - Start or reuse a PR Bench for a PR.
-  - Optional caller `context` is appended to a newly launched Pi session's system prompt via a unique external context file, without submitting a task or invoking kickoff. Dry runs do not write context files. Context is refused when no new Pi window will be launched; existing sessions are not modified.
-  - Initially may wrap existing `/workspace/bin/prrs-start`.
-  - Eventually prefer package-local script/code using PR Bench terminology.
-  - Draft/conflicted/failing/pinned PRs, stale/missing triage inference, and missing stack-parent Benches are informational, not start blockers. An explicit start request is sufficient authorization; do not request a separate merge-readiness acknowledgement.
-  - Preserve start safeguards for stale/incomplete snapshot data, existing Bench HEAD mismatches, and path/identity refusals, plus destructive reset/close safeguards.
-
-- `maglev_pr_bench_close`
-  - Close/tear down a PR Bench.
-  - Initially may wrap existing `/workspace/bin/prrs-teardown`.
-  - Dry-run by default unless explicit apply/confirm option is provided.
-  - Refuse to discard uncommitted changes unless explicitly requested.
-  - Refuse if local HEAD differs from PR head unless explicitly overridden.
-
-## TUI plan
-
-The TUI should be deterministic and should not own inference.
-
-Commands likely to keep/add:
-
-- `/maglev-prs`: main queue TUI.
-- `/maglev-pr-benches`: list active PR Benches.
-- `/maglev-pr-bench-close`: close one PR Bench.
-
-The TUI should:
-
-- call metadata refresh on refresh key
-- display snapshot + decisions + PR Bench status
-- compute `TRIAGE` from the same stale/missing-decision function as the tool
-- mark manual decisions through the decision API
-- use PR Bench APIs for open/close/inspect
-- use consistent PR Bench terminology
-- avoid session custom entries
-
-Suggested UI copy:
-
-- `b open bench`
-- `i insert review prompt`
-- `x close bench`
-- `X close bench and discard changes`
-- `TRIAGE means run skill inference`
-- `Bench: active tmux pr-1416 • path /var/lib/maglev-pr-maintainer/checkouts/pr-1416 • fresh`
-
-Avoid primary UI text like:
-
-- `w worktree`
-- `Local: ... wt`
-- `PRRS`
-
-## Skill plan
-
-### `maglev-pr-triage`
-
-Policy/inference wrapper only.
-
-Expected flow:
-
-1. Use `maglev_pr_needs_inference` to find PRs requiring inference.
-2. Use `maglev_pr_load_metadata` to load those PR facts from the snapshot.
-3. Infer bucket, priority, observations, and reason.
-4. Use `maglev_pr_decisions` to write decisions.
-5. Summarize review queue, chase batch, watch items, pinned items.
-
-The skill should not:
-
-- call `gh` directly for normal triage
-- edit JSON files directly
-- depend on TUI-exported `needs-refresh` files
-- generate scripts just to mutate decision JSON
-- start/close PR Benches unless the user explicitly asks and the PR Bench skill/tools are appropriate
-
-### `maglev-pr-bench`
-
-LLM-facing wrapper around PR Bench tools.
-
-Expected flow:
-
-- inspect/list benches through tools
-- start a bench only when explicitly requested
-- close a bench only when explicitly requested
-- avoid reviewing/chasing policy unless handed off from triage
-
-## Existing scripts migration notes
-
-Current helper scripts:
-
-```text
-/workspace/bin/prrs-start
-/workspace/bin/pr-worktree
-/workspace/bin/prrs-teardown
-```
-
-They currently use PRRS/worktree terminology. Treat them as low-level compatibility helpers during early implementation. Do not expose their names in primary UI/skill language except as migration notes.
-
-Future package-local scripts may be named:
-
-```text
-scripts/pr-bench-start
-scripts/pr-bench-close
-```
-
-These can wrap or replace the existing scripts.
-
-## Testing and validation
-
-Useful commands while developing:
+From this repository root:
 
 ```bash
-node --check extensions/index.ts
-```
-
-When testing in isolation:
-
-```bash
-cd /workspace/agentic/maglev-pr-maintainer
 pi --no-extensions --no-skills \
   -e ./extensions/index.ts \
   --skill ./skills \
   --name "Develop Maglev PR Maintainer"
 ```
 
-Before cutover, verify:
+Avoid loading old global resources alongside the package. Delegated triage also
+requires `pi-subagents`; load it explicitly when testing that workflow in isolation.
 
-- extension loads without old global extension
-- no tool/command name conflicts
-- metadata refresh writes only GitHub facts
-- decisions tool updates only decision file
-- needs-inference uses snapshot + decisions only
-- TUI uses PR Bench terminology consistently
-- TUI no longer writes session custom entries
-- PR Bench list/start/close works safely
+Run `npm test` for deterministic tests. The existing `npm run check` glob command
+checks only the first file (open F6). Until corrected, check each file explicitly:
+
+```bash
+for file in extensions/*.ts testdata/*.ts tests/*.test.ts; do
+  node --check "$file" || exit
+done
+git diff --check
+```
+
+This is syntax validation, not TypeScript typechecking. Test cross-process state
+mutations with isolated temporary files, never real maintainer state. Verify Pi
+extension loading separately from unit tests when registrations change. Never
+commit, push, publish, or run destructive lifecycle tests without authorization.
 
 ## Compatibility / migration
 
-No runtime compatibility reads from old PR Maintainer paths are supported. If state must be preserved, copy it into the maintainer root before running the package.
+No runtime compatibility reads from old maintainer paths are supported. Copy
+state into the configured root before use if preservation is required. Installation
+and cutover status is deployment-specific; do not assume global package settings
+from historical instructions.

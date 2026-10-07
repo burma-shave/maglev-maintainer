@@ -47,7 +47,7 @@ Optional argument: PR number or branch description. Prefer the current branch PR
 1. Confirm the PR:
 
 ```bash
-gh pr view --json number,title,body,headRefName,headRefOid,baseRefName,author,url
+gh pr view --repo OneBusAway/maglev --json number,title,body,headRefName,headRefOid,baseRefName,author,url
 ```
 
 If a PR number was provided, pass it to `gh pr view`.
@@ -84,7 +84,7 @@ Resolve the legacy Java repo before evaluating Java behavior using `maglev_pr_co
 
 ### 2. Run OBA API review
 
-Use the packaged `oba-api-change-review` skill. Save the report under `<artifacts.targetReportsDir>/oba-api-change-review-pr-<PR>.md` when the context has a target reports directory. If no target reports directory is available, fall back to `tmp/oba-api-pr-spec-review/oba-api-change-review-pr-<PR>.md`.
+Use the packaged `oba-api-change-review` skill. Follow `../librarian/SKILL.md`: save the report under `<artifacts.targetReportsDir>/oba-api-change-review-pr-<PR>.md` for the selected PR/Bench; an associated branch Bench retains its original reports path. If no applicable target directory is available, use `<maintainerRoot>/plans/oba-api-change-review-pr-<PR>.md`. Respect explicitly requested destinations; do not default to checkout-local `tmp/` or start a Bench solely for report storage.
 
 If invoking manually, use an output flag equivalent to:
 
@@ -101,7 +101,7 @@ Collect all available PR review material verbatim, including human reviewers, Co
 Start with:
 
 ```bash
-gh pr view <PR> --json comments,reviews
+gh pr view <PR> --repo OneBusAway/maglev --json comments,reviews
 ```
 
 Also attempt to gather inline review comments / threads. Use `gh api` or GraphQL as needed. Preserve enough information to cite each comment later: author, URL if available, file path, line, body, and resolved/outdated state if available.
@@ -251,7 +251,7 @@ If a decision changes a classification, keep the original ID and record the new 
 
 ## Phase 5: Write handoff files
 
-Create the chosen handoff directory if needed. Prefer `artifacts.targetReportsDir` from `maglev_pr_workspace_context`; if unavailable, use `tmp/oba-api-pr-spec-review/`.
+Create the chosen handoff directory if needed. Follow `../librarian/SKILL.md`: use `artifacts.targetReportsDir` from `maglev_pr_workspace_context` for the applicable PR or branch Bench; if unavailable, use `<maintainerRoot>/plans/`. Preserve an explicitly requested destination. Never default handoffs to checkout-local `tmp/`.
 
 ### Wiki spec update handoff
 
@@ -346,11 +346,18 @@ Side:
 ```
 ````
 
-Tell the user to run:
+For a requested prospective review draft, pass these settled comments, the reviewed
+head SHA, and validation evidence to the packaged draft skill:
 
 ```text
-/skill:pr-review-post-script <handoff-dir>/pr-<PR>-actionable-comments.md
+/skill:maglev-pr-review-draft <PR> <handoff-dir>/pr-<PR>-actionable-comments.md
 ```
+
+That skill uses `maglev_pr_review_json` to validate diff locations and save the
+centralized draft; it does not publish. If the maintainer separately requests a
+publication script, use `privileged-handoff-script` with that saved draft. Preserve
+user approval before publication; creating either artifact never authorizes
+executing a GitHub write.
 
 ## Final response
 
