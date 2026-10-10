@@ -1,7 +1,31 @@
 import { VALID_BUCKET_SET } from "./constants.ts";
 import { decisionMap } from "./decisions.ts";
-import type { DecisionsFile, NeedsInferenceRow, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
-import { newerThan, validIsoTimestamp } from "./utils.ts";
+import type { DecisionsFile, EvidenceComparison, NeedsInferenceRow, RecommendationApplicability, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
+import { discussionUpdatedAtFor } from "./github-core.ts";
+import { validIsoTimestamp } from "./utils.ts";
+
+function compareEvidence(evaluated: string | undefined, current: string | undefined, timestamp = false): EvidenceComparison {
+	const usable = (value?: string) => timestamp ? validIsoTimestamp(value) : typeof value === "string" && !!value.trim() && value.trim().toLowerCase() !== "unknown";
+	const known = usable(evaluated) && usable(current);
+	const matching = timestamp ? Date.parse(evaluated ?? "") === Date.parse(current ?? "") : evaluated === current;
+	return { status: !known ? "unknown" : matching ? "matching" : "changed", evaluated, current };
+}
+
+/** Compare evaluated facts, never write time. Current is not review/merge coverage. */
+export function assessRecommendation(pr: SnapshotPR | undefined, decision?: TriageDecision): RecommendationApplicability {
+	const head = compareEvidence(decision?.basis?.headOid, pr?.headOid);
+	const discussion = compareEvidence(decision?.basis?.discussionUpdatedAt, pr ? discussionUpdatedAtFor(pr) : undefined, true);
+	const reasons: string[] = [];
+	if (!decision) reasons.push("no saved bucket decision");
+	else if (!VALID_BUCKET_SET.has(decision.bucket)) reasons.push(`invalid saved bucket: ${decision.bucket}`);
+	else if (!validIsoTimestamp(decision.decidedAt)) reasons.push("saved decision has invalid decidedAt");
+	if (head.status === "changed") reasons.push("evaluated PR head differs from current snapshot head");
+	if (discussion.status === "changed") reasons.push("captured human discussion differs from evaluated discussion");
+	if (head.status === "unknown") reasons.push("evaluated or current PR head is unknown");
+	if (discussion.status === "unknown") reasons.push("evaluated or current human discussion basis is unknown");
+	const changed = head.status === "changed" || discussion.status === "changed";
+	return { status: changed ? "superseded" : reasons.length ? "unknown" : "current", reasons, head, discussion };
+}
 
 export function computeNeedsInference(snapshot: SnapshotFile, decisions: TriageDecision[], filter?: number[]): NeedsInferenceRow[] {
 	const decisionByPr = decisionMap(decisions);
@@ -10,13 +34,9 @@ export function computeNeedsInference(snapshot: SnapshotFile, decisions: TriageD
 		.filter((pr) => !filterSet || filterSet.has(pr.number))
 		.flatMap((pr) => {
 			const decision = decisionByPr.get(pr.number);
-			let reason: string | undefined;
-			if (!decision) reason = "no saved bucket decision";
-			else if (!VALID_BUCKET_SET.has(decision.bucket)) reason = `invalid saved bucket: ${decision.bucket}`;
-			else if (!validIsoTimestamp(decision.decidedAt)) reason = "saved decision has invalid decidedAt";
-			else if (newerThan(pr.meaningfulUpdatedAt, decision.decidedAt)) reason = "saved decision is stale after commit/human activity";
-			else if (decision.basis?.headOid && pr.headOid && decision.basis.headOid !== pr.headOid && newerThan(pr.lastCommit?.at, decision.decidedAt)) reason = "saved decision is stale after newer PR head commit";
-			if (!reason) return [];
+			const applicability = assessRecommendation(pr, decision);
+			if (applicability.status === "current") return [];
+			const reason = applicability.reasons[0];
 			return [{
 				number: pr.number,
 				title: pr.title,
@@ -25,6 +45,8 @@ export function computeNeedsInference(snapshot: SnapshotFile, decisions: TriageD
 				meaningfulUpdatedAt: pr.meaningfulUpdatedAt,
 				updatedAt: pr.updatedAt,
 				headOid: pr.headOid,
+				discussionUpdatedAt: discussionUpdatedAtFor(pr),
+				applicability,
 				decision,
 			}];
 		})
@@ -83,7 +105,7 @@ export async function loadPrMetadata(params: LoadPrMetadataInput, deps: TriageSt
 	return {
 		snapshotFetchedAt: snapshot.fetchedAt,
 		repo: snapshot.repo,
-		pullRequests: selectSnapshotPrs(snapshot, params, decisions.decisions),
+		pullRequests: selectSnapshotPrs(snapshot, params, decisions.decisions).map((pr) => ({ ...pr, discussionUpdatedAt: discussionUpdatedAtFor(pr) })),
 		missing: params.prs?.filter((number) => !snapshot.pullRequests.some((pr) => pr.number === number)) ?? [],
 	};
 }

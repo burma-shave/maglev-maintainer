@@ -10,7 +10,7 @@ test("buildStateQuery joins full snapshot, decision, needs-inference, and PR Ben
 	]);
 	const decisions = [
 		makeDecision(7, { bucket: "watch", reason: "old", decidedAt: "2026-01-02T00:00:00Z", basis: { headOid: "old" } }),
-		makeDecision(8, { bucket: "review", reason: "ready", decidedAt: "2026-01-02T00:00:00Z" }),
+		makeDecision(8, { bucket: "review", reason: "ready", decidedAt: "2026-01-02T00:00:00Z", basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } }),
 	];
 	const benches = [makeBenchState({ pr: 8, benchPath: "/var/lib/maglev-maintainer/checkouts/pr-8", freshness: "fresh" })];
 
@@ -21,7 +21,11 @@ test("buildStateQuery joins full snapshot, decision, needs-inference, and PR Ben
 	assert.equal(result.rows[0].snapshot?.title, "fresh");
 	assert.equal(result.rows[0].decision?.bucket, "review");
 	assert.equal(result.rows[0].bench?.benchPath, "/var/lib/maglev-maintainer/checkouts/pr-8");
-	assert.equal(result.rows[1].needsInference?.reason, "saved decision is stale after commit/human activity");
+	assert.equal(result.rows[1].needsInference?.reason, "evaluated PR head differs from current snapshot head");
+	assert.equal(result.rows[0].applicability.status, "current");
+	assert.equal(result.rows[1].applicability.status, "superseded");
+	assert.equal(result.rows[2].applicability.status, "unknown");
+	assert.equal(result.rows[1].applicability.head.evaluated, "old");
 	assert.equal(result.rows[2].snapshot, null);
 	assert.deepEqual(result.missingFromSnapshot, [99]);
 });
@@ -30,9 +34,9 @@ test("buildStateQuery supports needs-inference selection and limits without drop
 	const snapshot = makeSnapshotFile([
 		makeSnapshotPr({ number: 1, meaningfulUpdatedAt: "2026-01-03T00:00:00Z" }),
 		makeSnapshotPr({ number: 2, meaningfulUpdatedAt: "2026-01-04T00:00:00Z" }),
-		makeSnapshotPr({ number: 3, meaningfulUpdatedAt: "2026-01-01T00:00:00Z" }),
+		makeSnapshotPr({ number: 3, meaningfulUpdatedAt: "2026-01-01T00:00:00Z", headOid: "same" }),
 	]);
-	const decisions = [makeDecision(3, { decidedAt: "2026-01-02T00:00:00Z" })];
+	const decisions = [makeDecision(3, { decidedAt: "2026-01-02T00:00:00Z", basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } })];
 
 	const result = buildStateQuery({ snapshot, decisions, benches: [], selection: "needs-inference", limit: 1 });
 

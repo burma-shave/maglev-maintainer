@@ -1,6 +1,6 @@
 import { BOT_LOGINS, MAINTAINER_LOGINS } from "./constants.ts";
 import type { Activity, GhCheck, GhComment, GhCommit, GhPR, GhReview, SnapshotPR } from "./types.ts";
-import { latestByDate, latestTimestamp, truncateBody } from "./utils.ts";
+import { latestByDate, latestTimestamp, truncateBody, validIsoTimestamp } from "./utils.ts";
 
 function isBot(login?: string): boolean {
 	return !!login && BOT_LOGINS.has(login);
@@ -52,10 +52,23 @@ function normalizeComment(comment: GhComment): SnapshotPR["comments"][number] {
 	};
 }
 
+/** Old snapshots can derive current-side evidence; never use this to backfill a decision. */
+export function discussionUpdatedAtFor(pr: Pick<SnapshotPR, "createdAt" | "comments" | "reviews" | "discussionUpdatedAt">): string | undefined {
+	if (pr.discussionUpdatedAt !== undefined) return validIsoTimestamp(pr.discussionUpdatedAt) ? pr.discussionUpdatedAt : undefined;
+	const humanDates = [
+		...pr.comments.filter((comment) => !isBot(comment.author)).map((comment) => comment.createdAt),
+		...pr.reviews.filter((review) => !isBot(review.author)).map((review) => review.submittedAt),
+	];
+	if (humanDates.some((date) => !validIsoTimestamp(date))) return undefined;
+	return humanDates.length ? latestTimestamp(...humanDates) : validIsoTimestamp(pr.createdAt) ? pr.createdAt : undefined;
+}
+
 export function snapshotFromGh(gh: GhPR): SnapshotPR {
 	const reviews = gh.reviews ?? [];
 	const comments = gh.comments ?? [];
 	const commits = gh.commits ?? [];
+	const normalizedReviews = reviews.map(normalizeReview);
+	const normalizedComments = comments.map(normalizeComment);
 	const latestCommit = latestByDate(commits, (commit) => commit.committedDate);
 	const headCommit = (gh.headRefOid ? commits.find((commit) => commit.oid === gh.headRefOid) : undefined) ?? commits.at(-1) ?? latestCommit;
 	const lastCommit = activityFromCommit(headCommit);
@@ -93,14 +106,15 @@ export function snapshotFromGh(gh: GhPR): SnapshotPR {
 		createdAt: gh.createdAt,
 		updatedAt: gh.updatedAt,
 		meaningfulUpdatedAt,
+		discussionUpdatedAt: discussionUpdatedAtFor({ createdAt: gh.createdAt, reviews: normalizedReviews, comments: normalizedComments }),
 		reviewDecision: gh.reviewDecision ?? "",
 		mergeStateStatus: gh.mergeStateStatus ?? "UNKNOWN",
 		badChecks: parseBadChecks(gh.statusCheckRollup),
 		headOid: gh.headRefOid ?? lastCommit?.oid,
 		commitSummary,
 		commits,
-		reviews: reviews.map(normalizeReview),
-		comments: comments.map(normalizeComment),
+		reviews: normalizedReviews,
+		comments: normalizedComments,
 		files: (gh.files ?? []).map((file) => file.path),
 		lastCommit,
 		lastHumanReview,

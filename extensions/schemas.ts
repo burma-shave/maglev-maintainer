@@ -96,6 +96,7 @@ export const ReviewJsonLoadParamsSchema = Type.Object({
 });
 
 export const DecisionInputSchema = Type.Object({
+	mode: Type.Optional(Type.Union([Type.Literal("recommendation"), Type.Literal("record-only")], { description: "Default recommendation updates the queue. Record-only merges observations under the lock without changing an existing recommendation or its evaluated basis." })),
 	bucket: BucketSchema,
 	priority: Type.Optional(Type.Number({ minimum: 0, maximum: 9 })),
 	reason: Type.String({ minLength: 1, description: "Durable reason text. Use absolute dates; relative temporal phrases like today/yesterday/recently are rejected." }),
@@ -104,8 +105,9 @@ export const DecisionInputSchema = Type.Object({
 	basis: Type.Optional(Type.Object({
 		snapshotFetchedAt: Type.Optional(Type.String()),
 		meaningfulUpdatedAt: Type.Optional(Type.String()),
+		discussionUpdatedAt: Type.Optional(Type.String({ description: "Human-discussion watermark actually evaluated; omission remains unknown." })),
 		headOid: Type.Optional(Type.String()),
-	})),
+	}, { description: "Facts actually evaluated, including partial attribution. Never filled or replaced from the current snapshot; omitted basis preserves prior attribution or stays unknown." })),
 });
 
 export const DecisionsParamsSchema = Type.Object({

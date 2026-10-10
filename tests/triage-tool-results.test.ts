@@ -16,6 +16,7 @@ const pr = makeSnapshotPr({
 	title: "Fallback route lookup",
 	headOid: commit.oid,
 	meaningfulUpdatedAt: commit.committedDate,
+	discussionUpdatedAt: comment.createdAt,
 	comments: [comment],
 	reviews: [review],
 	commits: [commit],
@@ -70,8 +71,8 @@ test("loadMetadataToolResult exposes one selected PR's complete evidence and sna
 });
 
 test("loadMetadataToolResult preserves explicit selection semantics without a display cap", async () => {
-	const prs = Array.from({ length: 35 }, (_, i) => makeSnapshotPr({ number: i + 1 }));
-	const state = deps(prs, [makeDecision(1)]);
+	const prs = Array.from({ length: 35 }, (_, i) => makeSnapshotPr({ number: i + 1, headOid: "same" }));
+	const state = deps(prs, [makeDecision(1, { basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } })]);
 	for (const [params, expected] of [
 		[{ selection: "numbers", prs: [2, 3] }, [2, 3]],
 		[{ selection: "needs-inference", prs: [1, 2] }, [2]],
@@ -123,7 +124,11 @@ test("needsInferenceToolResult exposes every selected backlog identity and snaps
 	assert.equal(rows[0].author, pr.author);
 	assert.equal(rows[0].headOid, pr.headOid);
 	assert.equal(rows[0].meaningfulUpdatedAt, pr.meaningfulUpdatedAt);
-	assert.equal(rows[0].reason, "saved decision is stale after commit/human activity");
+	assert.equal(rows[0].reason, "evaluated PR head differs from current snapshot head");
+	assert.equal(rows[0].discussionUpdatedAt, comment.createdAt);
+	assert.equal(rows[0].applicability.status, "superseded");
+	assert.equal(rows[0].applicability.discussion.status, "unknown");
+	assert.equal(rows[1].applicability.status, "unknown");
 	assert.equal(rows[0].decision.bucket, "pinned");
 	assert.equal(rows[0].decision.source, "user");
 	assert.deepEqual(rows[0].decision.basis, savedDecision.basis);

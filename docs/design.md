@@ -88,7 +88,8 @@ Suggested decision fields:
 - `decidedAt`
 - `source`: `skill | user | tool | migration`
 - `basis.snapshotFetchedAt`
-- `basis.meaningfulUpdatedAt`
+- `basis.meaningfulUpdatedAt` (legacy sorting/provenance, not the discussion cutoff)
+- `basis.discussionUpdatedAt`
 - `basis.headOid`
 
 The existing `observations` array also carries durable PR analysis history through
@@ -96,15 +97,60 @@ self-contained `analysis:` records: absolute timestamp, type/scope, analyzed SHA
 and provenance, status/outcome, findings/no-findings, evidence, and validation limits.
 `maglev-pr-analysis-record` defines this skill-level convention; no new file/schema
 is introduced. Preserve older records when updating a decision. The analyzed SHA
-lives in each observation, independently of the writer's current snapshot basis.
+lives in each observation, independently of the recommendation's evaluated basis.
 Decision get/focused state query exposes history; compact list output omits it.
-Parent orchestrators serialize get/merge/upsert for a PR; the filesystem lock covers
-upsert, not a caller-side atomic append. Concurrent sessions require a single owner.
+Parent orchestrators serialize queue updates for a PR; ordinary recommendation
+replacement still lacks a caller-side atomic get/merge/upsert transaction and
+requires a single owner. Record-only observations are merged under the mutation
+lock, without reevaluating the recommendation or solving every history race.
 Review-selection skills and candidate analysts inspect exact history against fresh
 head metadata before recommending or dispatching reviews. Completed same-SHA,
 same-scope code reviews are reused regardless of findings; reruns need a concrete
 scope/validation reason or explicit override. This pre-launch skill guardrail does
 not add a post-review SHA gate or a raw-tool deterministic refusal.
+
+### Evaluated evidence versus storage time
+
+Evaluation attribution is independent of persistence timestamps. Decision basis
+contains an optional `discussionUpdatedAt` alongside the evaluated `headOid`.
+The discussion watermark uses captured non-bot comments/review summaries, or PR
+creation time when no human discussion was captured; it excludes commit activity.
+Older snapshot payloads can derive this current-side evidence from their arrays.
+The evaluated side of a legacy decision must not be backfilled from a newer
+snapshot. Missing attribution remains unknown until explicit reevaluation.
+Same-timestamp edits and uncollected inline threads are validation limits.
+
+The shared triage assessment returns `current` for matching known head/discussion
+facts, `superseded` for any known mismatch, and `unknown` when evidence or decision
+validity cannot establish applicability. Known mismatches take precedence over
+other unknown dimensions; all reasons and comparisons remain visible. Both
+superseded and unknown decisions need inference. Commit dates and `decidedAt`
+do not establish whether new facts were evaluated. Snapshot freshness and
+CI/merge-readiness are separate; current applicability is neither code-review
+completion nor approval or merge authorization.
+
+### Mutation intent
+
+Upsert accepts additive `decision.mode`: `recommendation` (default) or `record-only`.
+Recommendation writes retain explicit basis as supplied, with no snapshot fill;
+omitted basis preserves prior attribution or remains unknown for new decisions.
+Record-only merges/deduplicates observations inside the existing mutation lock,
+preserving the locked recommendation's bucket, priority, reason, source,
+`decidedAt`, and basis. New record-only decisions are neutral blocked-analysis
+placeholders with unknown applicability. Failed/incomplete/non-accepted attempts
+use this mode; their analyzed SHA/basis belongs in observations, not a refreshed
+recommendation. The tool's save result includes derived applicability and reasons.
+Ordinary recommendation replacement is not an atomic-history redesign and still
+needs caller-side observation preservation and same-PR coordination.
+
+Focused state-query rows include applicability even when no inference is needed.
+Compact discovery adds applicability comparisons and current discussion evidence;
+queue reassessment rows retain their historical decision and show previous bucket/
+reason. Save results report derived applicability after persistence; they do not
+reject an older result merely because its facts were superseded. None of these
+assessments guarantees current live GitHub state or completed code-review coverage.
+The packaged analyst returns the actual discussion watermark in its original
+basis; parent workflows preserve it and use record-only for non-accepted attempts.
 
 ## Tool surface
 
@@ -237,8 +283,10 @@ Skills orchestrate policy and inference using deterministic tools:
 ## Known safety/freshness limitations
 
 Close's commit-preservation safeguards do not currently apply to reset: preserve
-unpushed work before forced checkout (F1). Decision basis stamping and timestamp-
-dependent head-change detection remain open (F3/F4), independently of the fixed
-cross-process mutation race (F2). Claude command/plugin resolution and non-
+unpushed work before forced checkout (F1). Legacy attribution and incomplete
+captured discussion remain freshness limits. Historical F3/F4 findings require
+independent closure verification beyond the scoped SHA/provenance regression
+coverage; mutation locking (F2) alone never establishes freshness. Claude
+command/plugin resolution and non-
 publication behavior need deployment verification (F7); the wrapper does not
 prove that a plugin cannot post comments. See README for operational caveats.

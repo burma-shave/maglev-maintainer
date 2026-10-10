@@ -6,14 +6,14 @@ import { makeBenchState, makeDecision, makeSnapshotFile, makeSnapshotPr } from "
 test("buildQueueModel puts missing and stale decisions in TRIAGE and excludes stale saved buckets", () => {
 	const snapshot = makeSnapshotFile([
 		makeSnapshotPr({ number: 1, meaningfulUpdatedAt: "2026-01-03T00:00:00Z" }),
-		makeSnapshotPr({ number: 2, meaningfulUpdatedAt: "2026-01-04T00:00:00Z" }),
-		makeSnapshotPr({ number: 3, meaningfulUpdatedAt: "2026-01-01T00:00:00Z" }),
+		makeSnapshotPr({ number: 2, meaningfulUpdatedAt: "2026-01-04T00:00:00Z", headOid: "new" }),
+		makeSnapshotPr({ number: 3, meaningfulUpdatedAt: "2026-01-01T00:00:00Z", headOid: "same" }),
 	]);
 	const model = buildQueueModel({
 		snapshot,
 		decisions: [
-			makeDecision(2, { bucket: "watch", decidedAt: "2026-01-02T00:00:00Z", reason: "old wait" }),
-			makeDecision(3, { bucket: "review", decidedAt: "2026-01-02T00:00:00Z", reason: "ready" }),
+			makeDecision(2, { bucket: "watch", decidedAt: "2026-01-02T00:00:00Z", reason: "old wait", basis: { headOid: "old" } }),
+			makeDecision(3, { bucket: "review", decidedAt: "2026-01-02T00:00:00Z", reason: "ready", basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } }),
 		],
 		benches: [],
 	});
@@ -21,19 +21,24 @@ test("buildQueueModel puts missing and stale decisions in TRIAGE and excludes st
 	assert.deepEqual(model.rowsByBucket.triage.map((row) => row.pr), [2, 1]);
 	assert.deepEqual(model.rowsByBucket.watch.map((row) => row.pr), []);
 	assert.deepEqual(model.rowsByBucket.review.map((row) => row.pr), [3]);
-	assert.equal(model.rowsByBucket.triage[0].reason, "saved decision is stale after commit/human activity");
+	assert.equal(model.rowsByBucket.triage[0].reason, "evaluated PR head differs from current snapshot head");
+	assert.equal(model.rowsByBucket.triage[0].applicability?.status, "superseded");
+	assert.equal(model.rowsByBucket.triage[0].decision?.reason, "old wait");
+	assert.equal(model.rowsByBucket.triage[1].applicability?.status, "unknown");
+	assert.equal(model.rowsByBucket.review[0].applicability?.status, "current");
+	assert.ok(formatQueueReportLines(model).some((line) => line.includes("previous watch: old wait")));
 });
 
 test("buildQueueModel groups decisions, sorts by priority, and computes PR Bench rows", () => {
 	const snapshot = makeSnapshotFile([
-		makeSnapshotPr({ number: 10, title: "Low", meaningfulUpdatedAt: "2026-01-03T00:00:00Z" }),
-		makeSnapshotPr({ number: 11, title: "High", meaningfulUpdatedAt: "2026-01-02T00:00:00Z" }),
+		makeSnapshotPr({ number: 10, title: "Low", meaningfulUpdatedAt: "2026-01-03T00:00:00Z", headOid: "same" }),
+		makeSnapshotPr({ number: 11, title: "High", meaningfulUpdatedAt: "2026-01-02T00:00:00Z", headOid: "same" }),
 	]);
 	const model = buildQueueModel({
 		snapshot,
 		decisions: [
-			makeDecision(10, { bucket: "review", priority: 1, decidedAt: "2026-01-04T00:00:00Z" }),
-			makeDecision(11, { bucket: "review", priority: 7, decidedAt: "2026-01-04T00:00:00Z" }),
+			makeDecision(10, { bucket: "review", priority: 1, decidedAt: "2026-01-04T00:00:00Z", basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } }),
+			makeDecision(11, { bucket: "review", priority: 7, decidedAt: "2026-01-04T00:00:00Z", basis: { headOid: "same", discussionUpdatedAt: "2026-01-01T00:00:00Z" } }),
 		],
 		benches: [makeBenchState({ pr: 11, title: "Bench fallback", benchPath: "/var/lib/maglev-maintainer/checkouts/pr-11", freshness: "fresh", fresh: true })],
 	});

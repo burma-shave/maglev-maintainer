@@ -72,9 +72,10 @@ Claude Code completion or draft creation.
    label. Do not call metadata triage a code review.
 2. Record the full SHA of the source analyzed and how it was established (checked
    source/ref, reviewer output, or snapshot attribution). Do not silently use the
-   decision's current `basis.headOid` as proof of the analyzed revision: the
-   decision writer stamps the current snapshot basis, which can differ. Include
-   the SHA in the observation itself. If unavailable, record `sha=unknown` and
+   decision's current `basis.headOid` as proof of the analyzed revision: that
+   basis describes a recommendation and can differ from this analysis. Include
+   the SHA in the observation itself. Also retain the original discussion watermark
+   and snapshot identity when available; later facts never replace evaluated basis. If unavailable, record `sha=unknown` and
    the limitation; do not invent a SHA or omit the failed analysis. Uncommitted
    edits require a dirty/diff caveat; HEAD alone does not identify those edits.
    This records revision attribution, not an extra SHA-confirmation gate for
@@ -103,17 +104,29 @@ Claude Code completion or draft creation.
      record clean-review evidence and the remaining hold in observations/reason.
    - Valid actionable findings generally mean contributor action (`watch`),
      unless a maintainer/spec decision is the actual next action (`pinned`).
-   - Failed/incomplete analysis preserves the existing queue decision; if no
-     decision exists, use `review` with a reason describing the blocked analysis,
-     not merge readiness. Metadata triage uses its settled triage recommendation.
+   - Failed/incomplete/blocked or unresolved analysis uses `decision.mode: "record-only"`
+     and preserves the existing queue recommendation, evaluation time, and basis.
+     If no decision exists, the tool creates a neutral blocked-analysis `review`
+     placeholder with unknown applicability, not merge readiness. Metadata triage
+     uses its settled triage recommendation.
    - Narrow API/spec/client/goal analysis is not general code review or approval.
-6. Upsert via `maglev_pr_decisions`, passing the preserved observations plus the
-   new record, reason, bucket, priority, source, and analysis/snapshot basis.
-   Serialize saves in the parent; read-only analysts return the record facts to
-   the parent, which owns persistence. Do not let parallel children read/replace
-   the same PR decision. The existing lock protects each upsert, not a separate
-   caller-side get/merge/upsert transaction. If other sessions may write the same
-   PR concurrently, coordinate a single owner rather than claiming atomic append.
+6. Upsert via `maglev_pr_decisions`. For an accepted completed recommendation,
+   use `decision.mode: "recommendation"`, preserved observations plus the new record,
+   and the explicit head/discussion/snapshot basis actually evaluated. The writer
+   retains explicit partial basis; omission preserves prior attribution or leaves
+   a new decision unknown. Do not fill missing evidence with newer facts. A result
+   superseded by later evidence is still retained and labeled superseded, not current.
+   For failed/incomplete/blocked/unresolved or other non-accepted attempts, use
+   `decision.mode: "record-only"`, supplying the new observations and valid required
+   bucket/reason fields (use the previous decision or a neutral blocked-analysis
+   description). Existing recommendation fields and basis are preserved from the
+   locked read; put attempt-specific SHA, discussionUpdatedAt, snapshotFetchedAt,
+   and superseded status in the observation itself. This mode merges observations
+   under the lock and does not refresh evaluation time. Serialize saves in the
+   parent; read-only analysts return facts to the parent, which owns persistence.
+   Ordinary recommendation replacement is not a separate atomic caller-side
+   get/merge/upsert transaction. Coordinate a single owner for competing queue
+   updates; record-only is not a general structured/atomic-history redesign.
 7. Confirm the saved result and report the PR, type, SHA, outcome, and decisions
    file path. If saving fails, report the exact persistence blocker; do not claim
    the analysis handoff is complete. A draft save failure does not excuse saving

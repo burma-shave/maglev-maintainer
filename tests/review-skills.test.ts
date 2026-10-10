@@ -55,6 +55,9 @@ test("analysis policy retains SHA-attributed clean, failed, and historical resul
 	assert.match(text, /No findings alone is not approval/);
 	assert.match(text, /explicit user pins/);
 	assert.match(text, /not a separate[\s\S]*get\/merge\/upsert transaction/);
+	assert.match(text, /decision.mode: "record-only"/);
+	assert.match(text, /discussionUpdatedAt/);
+	assert.doesNotMatch(text, /writer stamps the current snapshot basis/);
 });
 
 test("all PR analysis entry points require durable result handoff", async () => {
@@ -65,6 +68,8 @@ test("all PR analysis entry points require durable result handoff", async () => 
 	assert.match(code, /every outcome/);
 	assert.match(code, /potential merge candidate/);
 	assert.match(code, /parent owns serialized decision saves/);
+	assert.match(code, /decision.mode: "record-only"/);
+	assert.match(code, /discussionUpdatedAt/);
 	const draft = await skill("maglev-pr-review-draft");
 	assert.match(draft, /Deleting a draft does not delete/);
 });

@@ -35,6 +35,8 @@ export function needsInferenceToolResult(result: ListPrsNeedingInferenceResult, 
 			meaningfulUpdatedAt: row.meaningfulUpdatedAt,
 			updatedAt: row.updatedAt,
 			headOid: row.headOid,
+			discussionUpdatedAt: row.discussionUpdatedAt,
+			applicability: row.applicability,
 			decision: row.decision ? compactDecision(row.decision) : undefined,
 		})),
 	].join("\n");

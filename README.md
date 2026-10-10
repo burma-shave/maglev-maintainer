@@ -462,7 +462,69 @@ All maintainer-owned state is rooted at `/var/lib/maglev-maintainer` by default.
     ...
 ```
 
+### Evaluation evidence and legacy state
+
+Decision basis describes the facts evaluated, not the facts present when a file
+was last written. `headOid` identifies evaluated code; `discussionUpdatedAt`
+identifies the latest captured human comment/review-summary activity considered.
+Snapshot fetch time and decision save time are not proof that newer evidence was
+evaluated. An unchanged SHA and discussion watermark survive a simple refetch.
+
+Older snapshots can derive their current discussion watermark from captured
+comments/reviews (or PR creation time for empty discussion). Older decisions are
+not backfilled from current facts: missing attribution remains unknown and needs
+explicit reassessment. No destructive state migration is required. The watermark
+excludes commits and known bots; same-timestamp discussion edits and uncollected
+inline review threads remain coverage limitations.
+
+Recommendation applicability has three states:
+- `current`: known evaluated head and human-discussion watermark match the snapshot.
+- `superseded`: a known head or discussion mismatch requires reassessment, regardless
+  of commit dates or save time; historical evidence is retained.
+- `unknown`: missing/invalid attribution cannot establish applicability and requires
+  reassessment (a known mismatch takes precedence and remains `superseded`).
+
+This is not completed code-review coverage, approval, successful CI, or permission
+to merge. Snapshot age and CI/merge-readiness are separate concerns; changing only
+checks or merge state does not supersede code/discussion applicability.
+
 Decision reasons/observations are durable text: use absolute dates like `maintainer chased on 2026-09-05`, not relative phrases like `chased today`.
+
+Decision upsert defaults to `decision.mode: "recommendation"`. Explicit basis is
+retained exactly (including partial attribution); omitted basis preserves the prior
+basis or stays unknown for a new decision. Newer snapshot facts never replace it.
+
+Use `decision.mode: "record-only"` for failed, incomplete, blocked, or otherwise
+non-accepted analysis attempts. It merges/deduplicates supplied observations under
+the existing lock while preserving bucket, priority, reason, source, `decidedAt`,
+and basis from the locked read. Without a prior decision it creates a neutral
+blocked-analysis `review` placeholder with unknown applicability. Caller-supplied
+recommendation fields do not change an existing recommendation in this mode.
+Ordinary recommendation replacement still requires preservation of older
+observations and is not a general atomic-history or same-PR concurrency solution.
+
+For example, after explicitly evaluating captured facts:
+
+```json
+{"operation":"upsert","pr":123,"decision":{"mode":"recommendation","bucket":"watch","reason":"2026-10-10 contributor response needed","basis":{"snapshotFetchedAt":"2026-10-10T00:00:00Z","headOid":"0123456789abcdef0123456789abcdef01234567","discussionUpdatedAt":"2026-10-09T12:00:00Z"},"observations":["analysis: at=2026-10-10T01:00:00Z; type=metadata-triage; sha=0123456789abcdef0123456789abcdef01234567; status=completed; outcome=not-applicable; summary=contributor response needed"]}}
+```
+
+To retain an unsuccessful attempt without reevaluation:
+
+```json
+{"operation":"upsert","pr":123,"decision":{"mode":"record-only","bucket":"review","reason":"2026-10-10 blocked analysis","observations":["analysis: at=2026-10-10T02:00:00Z; type=metadata-triage; sha=unknown; status=blocked; outcome=unconfirmed; summary=required evidence unavailable"]}}
+```
+
+These illustrative observations are abbreviated; production records follow
+`maglev-pr-analysis-record` for provenance, scope, evidence, and validation limits.
+The save result and focused `maglev_pr_state_query` expose `applicability.status`,
+`reasons`, and `head`/`discussion` comparisons with `evaluated` and `current` values.
+Compact needs-inference results carry those comparisons plus current
+`discussionUpdatedAt`; queue reports show applicability and the previous bucket/
+reason on reassessment rows. Full observations remain in focused decision/query
+results, not compact backlog summaries. Legacy records missing evidence stay
+readable and need explicit reassessment; recording failures does not clear that
+need. None of these outputs establishes CI readiness or general review coverage.
 
 Decision upsert/delete holds a cross-process filesystem lock for the entire
 read-modify-write. Contention is bounded; locks are never automatically reclaimed
@@ -481,8 +543,11 @@ No Pi session custom entries should be used for canonical workflow state.
 
 - Reset does not yet protect displaced unpushed commits as close does (F1).
   Preserve committed work before resetting a Bench.
-- Decision basis stamping and older-date head changes still have open freshness
-  findings (F3/F4); cross-process locking fixes F2, not those semantics.
+- Legacy evaluation attribution remains unknown until explicit reassessment.
+  Discussion watermarks do not cover same-timestamp edits or uncollected inline
+  threads. Historical freshness findings F3/F4 require independent closure
+  verification; neither mutation locking nor this scoped change is a full
+  freshness/coverage audit.
 - Claude `/code-review` publication depends on the installed command/plugin
   version (F7). Some variants post PR comments automatically; verify active
   resolution and use a non-publishing-by-default variant for local-only review.

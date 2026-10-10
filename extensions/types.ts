@@ -86,6 +86,8 @@ export interface SnapshotPR {
 	createdAt: string;
 	updatedAt: string;
 	meaningfulUpdatedAt: string;
+	/** Latest captured human discussion, excluding commits and bots. */
+	discussionUpdatedAt?: string;
 	reviewDecision: string;
 	mergeStateStatus: string;
 	badChecks: string[];
@@ -118,7 +120,22 @@ export interface SnapshotFile {
 export interface DecisionBasis {
 	snapshotFetchedAt?: string;
 	meaningfulUpdatedAt?: string;
+	discussionUpdatedAt?: string;
 	headOid?: string;
+}
+
+export interface EvidenceComparison {
+	status: "matching" | "changed" | "unknown";
+	evaluated?: string;
+	current?: string;
+}
+
+/** Applicability to captured evidence, not review coverage or merge permission. */
+export interface RecommendationApplicability {
+	status: "current" | "superseded" | "unknown";
+	reasons: string[];
+	head: EvidenceComparison;
+	discussion: EvidenceComparison;
 }
 
 export interface TriageDecision {
@@ -147,6 +164,8 @@ export interface NeedsInferenceRow {
 	meaningfulUpdatedAt: string;
 	updatedAt: string;
 	headOid?: string;
+	discussionUpdatedAt?: string;
+	applicability: RecommendationApplicability;
 	decision?: TriageDecision;
 }
 

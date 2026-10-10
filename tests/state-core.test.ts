@@ -47,7 +47,7 @@ test("loadDecisionsFromFile returns empty decisions when absent and normalizes a
 test("writeDecisionsToFile writes normalized schema and sorts decisions by PR number", async () => {
 	const files = await tempFiles();
 	const file = makeDecisionsFile([
-		makeDecision(10, { bucket: "watch", reason: "later", decidedAt: "2026-01-01T00:00:00Z" }),
+		makeDecision(10, { bucket: "watch", reason: "later", decidedAt: "2026-01-01T00:00:00Z", basis: { headOid: "abc123", discussionUpdatedAt: "2026-01-01T00:00:00Z" } }),
 		makeDecision(2, { bucket: "review", reason: "earlier", decidedAt: "2026-01-01T00:00:00Z" }),
 	]);
 
@@ -58,4 +58,8 @@ test("writeDecisionsToFile writes normalized schema and sorts decisions by PR nu
 	assert.equal(written.repo, "OneBusAway/maglev");
 	assert.ok(Number.isFinite(Date.parse(written.updatedAt)));
 	assert.deepEqual(written.decisions.map((decision: { pr: number }) => decision.pr), [2, 10]);
+	const loaded = (await loadDecisionsFromFile(files.decisions)).file.decisions;
+	assert.equal(loaded[0].basis, undefined, "legacy attribution stays absent");
+	assert.equal(loaded[1].basis?.discussionUpdatedAt, "2026-01-01T00:00:00Z");
+	assert.equal(loaded[1].basis?.headOid, "abc123");
 });

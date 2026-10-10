@@ -1,7 +1,7 @@
 import { VALID_BUCKET_SET } from "./constants.ts";
 import { decisionMap } from "./decisions.ts";
-import { computeNeedsInference } from "./triage.ts";
-import type { BenchState, DecisionBucket, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
+import { assessRecommendation, computeNeedsInference } from "./triage.ts";
+import type { BenchState, DecisionBucket, SnapshotFile, SnapshotPR, TriageDecision, RecommendationApplicability } from "./types.ts";
 
 export type QueueBucket = "triage" | DecisionBucket | "bench";
 
@@ -16,6 +16,8 @@ export interface QueueRow {
 	decidedAt?: string;
 	meaningfulUpdatedAt?: string;
 	bench?: BenchState;
+	decision?: TriageDecision;
+	applicability?: RecommendationApplicability;
 }
 
 export interface QueueModel {
@@ -63,7 +65,7 @@ export function buildQueueModel(input: BuildQueueInput): QueueModel {
 	const needsSet = new Set(needs.map((row) => row.number));
 	for (const row of needs) {
 		const pr = prByNumber.get(row.number);
-		if (pr) rowsByBucket.triage.push(snapshotRow(pr, "triage", { reason: row.reason }));
+		if (pr) rowsByBucket.triage.push(snapshotRow(pr, "triage", { reason: row.reason, decision: row.decision, applicability: row.applicability }));
 	}
 
 	for (const decision of decisionMap(input.decisions).values()) {
@@ -76,6 +78,8 @@ export function buildQueueModel(input: BuildQueueInput): QueueModel {
 			priority: decision.priority,
 			reason: decision.reason,
 			decidedAt: decision.decidedAt,
+			decision,
+			applicability: assessRecommendation(pr, decision),
 		}));
 	}
 
@@ -119,6 +123,9 @@ function formatQueueRow(row: QueueRow): string {
 		row.author,
 		typeof row.priority === "number" ? `p${row.priority}` : undefined,
 		row.reason,
+		row.applicability ? `applicability ${row.applicability.status}` : undefined,
+		row.bucket === "triage" && row.decision ? `previous ${row.decision.bucket}: ${row.decision.reason}` : undefined,
+		row.bucket === "triage" ? row.applicability?.reasons.slice(1).join("; ") : undefined,
 		row.bucket === "bench" && row.bench?.tmuxExists ? `tmux ${row.bench.sessionName}` : undefined,
 		row.bucket === "bench" ? row.bench?.benchPath : undefined,
 		row.bucket === "bench" && row.bench?.freshness !== "unknown" ? row.bench?.freshness : undefined,

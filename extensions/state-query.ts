@@ -1,6 +1,6 @@
 import { decisionMap } from "./decisions.ts";
-import { computeNeedsInference } from "./triage.ts";
-import type { BenchState, NeedsInferenceRow, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
+import { assessRecommendation, computeNeedsInference } from "./triage.ts";
+import type { BenchState, NeedsInferenceRow, SnapshotFile, SnapshotPR, TriageDecision, RecommendationApplicability } from "./types.ts";
 
 export interface StateQueryInput {
 	snapshot: SnapshotFile;
@@ -15,6 +15,7 @@ export interface StateQueryRow {
 	pr: number;
 	snapshot: SnapshotPR | null;
 	decision: TriageDecision | null;
+	applicability: RecommendationApplicability;
 	needsInference: NeedsInferenceRow | null;
 	bench: BenchState | null;
 }
@@ -68,6 +69,7 @@ export function buildStateQuery(input: StateQueryInput): StateQueryResult {
 			pr,
 			snapshot: snapshotByPr.get(pr) ?? null,
 			decision: decisionByPr.get(pr) ?? null,
+			applicability: assessRecommendation(snapshotByPr.get(pr), decisionByPr.get(pr)),
 			needsInference: needsByPr.get(pr) ?? null,
 			bench: benchByPr.get(pr) ?? null,
 		})),

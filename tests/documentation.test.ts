@@ -139,6 +139,34 @@ test("one Bench skill covers unified ID-based lifecycle without weakening safegu
 	assert.match(artifacts, /Never relocate or overwrite tool-owned/);
 });
 
+test("freshness documentation distinguishes applicability from readiness and coverage", async () => {
+	for (const path of ["README.md", "docs/design.md"]) {
+		const text = await read(path);
+		for (const state of ["current", "superseded", "unknown"]) assert.ok(text.includes(`\`${state}\``));
+		assert.match(text, /discussionUpdatedAt/);
+		assert.match(text, /legacy|Older decisions/);
+		assert.match(text, /[Ss]ame-timestamp/);
+		assert.match(text, /inline.*threads|inline review threads/);
+		assert.match(text, /CI\/merge-readiness/);
+		assert.match(text, /[Cc]ompact.*discovery|Compact needs-inference/);
+		assert.match(text, /previous bucket/);
+		assert.doesNotMatch(text, /writer's current snapshot basis/);
+	}
+});
+
+test("decision mutation contract documents record-only intent and truthful basis", async () => {
+	const schema = await read("extensions/schemas.ts");
+	assert.match(schema, /Type.Literal\("record-only"\)/);
+	assert.match(schema, /discussionUpdatedAt/);
+	assert.match(await read("extensions/index.ts"), /Recorded observations without reevaluating recommendation/);
+	for (const path of ["README.md", "docs/design.md"]) {
+		const text = await read(path);
+		assert.match(text, /record-only/);
+		assert.match(text, /omitted basis/i);
+		assert.match(text, /not a.*atomic-history/);
+	}
+});
+
 test("artifact placement and script execution guidance match current policy", async () => {
 	for (const path of ["skills/oba-api-change-review/SKILL.md", "skills/oba-api-pr-spec-review/SKILL.md", "skills/oba-api-change-review/README.md", "skills/maglev-artifacts/SKILL.md"]) {
 		const text = await read(path);

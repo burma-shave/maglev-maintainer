@@ -22,6 +22,8 @@ test("package exposes the fresh-context read-only triage analyst", async () => {
 	assert.ok(!/^skills:|^skillPath:/m.test(agent));
 	assert.ok(agent.includes("using its advertised absolute location"));
 	assert.ok(!agent.includes("relative to this agent file"));
+	assert.ok(agent.includes('"discussionUpdatedAt"'));
+	assert.ok(agent.includes('decision.mode: "record-only"'));
 	for (const field of ["basis", "recommendation", "action", "readiness", "evidence", "confidence", "caveats", "needsParentConfirmation"]) {
 		assert.ok(agent.includes(`"${field}"`), `missing compact result field: ${field}`);
 	}
@@ -34,6 +36,8 @@ test("triage delegates without bulk metadata and keeps persistence in the parent
 	assert.ok(skill.includes("at most three active analysts"));
 	assert.ok(skill.includes("Do not load all selected PRs' metadata into the parent"));
 	assert.ok(skill.includes("Persist accepted results sequentially"));
-	assert.ok(skill.includes("discard affected recommendations and reanalyze"));
+	assert.ok(skill.includes("Retain the original result and basis even if superseded"));
+	assert.ok(skill.includes('decision.mode: "record-only"'));
+	assert.ok(skill.includes("discussionUpdatedAt"));
 	assert.ok(skill.includes("leave affected decisions unchanged"));
 });

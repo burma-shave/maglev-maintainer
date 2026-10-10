@@ -1,9 +1,11 @@
 import { VALID_BUCKETS, VALID_BUCKET_SET } from "./constants.ts";
 import { withDecisionFileLock } from "./decision-lock.ts";
-import type { DecisionBasis, DecisionsFile, SnapshotFile, SnapshotPR, TriageDecision } from "./types.ts";
+import type { DecisionBasis, DecisionsFile, SnapshotFile, TriageDecision } from "./types.ts";
 import { validIsoTimestamp } from "./utils.ts";
 
 export interface DecisionInput {
+	/** Record observations without reevaluating an existing recommendation. */
+	mode?: "recommendation" | "record-only";
 	bucket: TriageDecision["bucket"];
 	priority?: number;
 	reason: string;
@@ -49,6 +51,7 @@ export function normalizeDecision(raw: any, sourceOverride?: string): TriageDeci
 		basis: raw.basis && typeof raw.basis === "object" ? {
 			snapshotFetchedAt: typeof raw.basis.snapshotFetchedAt === "string" ? raw.basis.snapshotFetchedAt : undefined,
 			meaningfulUpdatedAt: typeof raw.basis.meaningfulUpdatedAt === "string" ? raw.basis.meaningfulUpdatedAt : undefined,
+			discussionUpdatedAt: typeof raw.basis.discussionUpdatedAt === "string" ? raw.basis.discussionUpdatedAt : undefined,
 			headOid: typeof raw.basis.headOid === "string" ? raw.basis.headOid : undefined,
 		} : undefined,
 	};
@@ -117,6 +120,7 @@ export async function deleteDecision(pr: number, deps: Pick<DecisionStoreDeps, "
 
 export async function saveDecision(pr: number, input: DecisionInput, deps: DecisionStoreDeps): Promise<TriageDecision> {
 	assertPositivePr(pr);
+	if (input.mode !== undefined && input.mode !== "recommendation" && input.mode !== "record-only") throw new Error("Invalid decision mutation mode");
 	if (!VALID_BUCKET_SET.has(input.bucket)) throw new Error(`Invalid bucket ${input.bucket}. Valid buckets: ${VALID_BUCKETS.join(", ")}`);
 	const reason = input.reason.trim();
 	if (!reason) throw new Error("Decision reason is required");
@@ -127,31 +131,27 @@ export async function saveDecision(pr: number, input: DecisionInput, deps: Decis
 	return withDecisionFileLock(deps.decisionsFile, async () => {
 		const loaded = await deps.loadDecisions();
 		const byPr = decisionMap(loaded.file.decisions);
-		let snapshot: SnapshotFile | undefined;
-		let snapshotPr: SnapshotPR | undefined;
-		if (deps.loadSnapshot) {
-			try {
-				snapshot = await deps.loadSnapshot();
-				snapshotPr = snapshot.pullRequests.find((item) => item.number === pr);
-			} catch {
-				// Decisions are still useful during migration/bootstrap; basis falls back to caller-provided values.
-			}
-		}
-
-		const decision: TriageDecision = {
+		const previous = byPr.get(pr);
+		const recordedAt = (deps.now?.() ?? new Date()).toISOString();
+		const decision: TriageDecision = input.mode === "record-only" ? {
+			...(previous ?? {
+				pr,
+				bucket: "review" as const,
+				reason: `${recordedAt} blocked analysis; no completed recommendation evaluation`,
+				decidedAt: recordedAt,
+				source: input.source ?? "skill",
+			}),
+			observations: [...new Set([...(previous?.observations ?? []), ...(observations ?? [])])],
+		} : {
 			pr,
 			bucket: input.bucket,
 			priority: typeof input.priority === "number" ? input.priority : undefined,
 			reason,
 			observations,
-			decidedAt: (deps.now?.() ?? new Date()).toISOString(),
+			decidedAt: recordedAt,
 			source: input.source ?? "skill",
-			basis: {
-				...input.basis,
-				snapshotFetchedAt: snapshot?.fetchedAt ?? input.basis?.snapshotFetchedAt,
-				meaningfulUpdatedAt: snapshotPr?.meaningfulUpdatedAt ?? input.basis?.meaningfulUpdatedAt,
-				headOid: snapshotPr?.headOid ?? input.basis?.headOid,
-			},
+			// A write is not proof that the latest snapshot was evaluated.
+			basis: input.basis !== undefined ? { ...input.basis } : previous?.basis,
 		};
 		byPr.set(pr, decision);
 		deps.signal?.throwIfAborted();

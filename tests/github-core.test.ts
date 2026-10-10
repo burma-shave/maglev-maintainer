@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { addStackMetadata, parseBadChecks, snapshotFromGh } from "../extensions/github-core.ts";
+import { addStackMetadata, discussionUpdatedAtFor, parseBadChecks, snapshotFromGh } from "../extensions/github-core.ts";
 import { makeGhPr } from "../testdata/fixtures.ts";
 
 function snapshotPr(number: number, headRefName: string, baseRefName = "main") {
@@ -40,6 +40,7 @@ test("snapshotFromGh derives meaningful activity from commits and non-bot human 
 	assert.equal(pr.headRepositoryNameWithOwner, "OneBusAway/maglev");
 	assert.equal(pr.commitSummary.count, 2);
 	assert.equal(pr.meaningfulUpdatedAt, "2026-01-07T00:00:00Z");
+	assert.equal(pr.discussionUpdatedAt, "2026-01-07T00:00:00Z");
 	assert.equal(pr.lastHumanReview?.author, "bob");
 	assert.equal(pr.lastChangeRequest?.author, "bob");
 	assert.equal(pr.lastCodeRabbitReview?.author, "coderabbitai");
@@ -62,6 +63,22 @@ test("snapshotFromGh uses headRefOid as the PR head when commit dates tie", () =
 	assert.equal(pr.headOid, "3333333cccc");
 	assert.equal(pr.commitSummary.lastOid, "3333333cccc");
 	assert.equal(pr.lastCommit?.body, "Actual head");
+});
+
+test("discussion watermark excludes commits and bot churn, and falls back for old snapshots", () => {
+	const pr = snapshotFromGh(makeGhPr({
+		commits: [{ oid: "head", committedDate: "2026-01-20T00:00:00Z", messageHeadline: "Code only" }],
+		comments: [{ author: { login: "github-actions" }, createdAt: "2026-01-21T00:00:00Z" }],
+	}));
+	assert.equal(pr.discussionUpdatedAt, pr.createdAt);
+	const legacy = { ...pr, discussionUpdatedAt: undefined };
+	assert.equal(discussionUpdatedAtFor(legacy), pr.createdAt);
+	legacy.reviews.push({ author: "human", state: "COMMENTED", submittedAt: "2026-01-03T00:00:00Z" });
+	assert.equal(discussionUpdatedAtFor(legacy), "2026-01-03T00:00:00Z");
+	legacy.comments.push({ author: "human", createdAt: "2026-01-04T00:00:00Z" });
+	assert.equal(discussionUpdatedAtFor(legacy), "2026-01-04T00:00:00Z");
+	assert.equal(discussionUpdatedAtFor({ ...legacy, discussionUpdatedAt: "bad" }), undefined);
+	assert.equal(discussionUpdatedAtFor({ ...legacy, comments: [{ author: "human", createdAt: "bad" }] }), undefined);
 });
 
 test("addStackMetadata links stacked PRs by base/head branch refs", () => {

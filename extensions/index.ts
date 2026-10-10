@@ -20,7 +20,7 @@ import { clearReviewJsonArtifact, formatReviewJsonArtifactLine, listReviewJsonAr
 import { checkSnapshotStaleness, formatSnapshotStaleness } from "./snapshot-staleness.ts";
 import { buildStateQuery, formatStateQueryJson } from "./state-query.ts";
 import { getMaintainerStatus, type MaintainerStatus } from "./status.ts";
-import { compactPrLine, computeNeedsInference, listPrsNeedingInference, loadPrMetadata } from "./triage.ts";
+import { assessRecommendation, compactPrLine, computeNeedsInference, listPrsNeedingInference, loadPrMetadata } from "./triage.ts";
 import { decisionGetToolResult, decisionListToolResult, loadMetadataToolResult, needsInferenceToolResult } from "./triage-tool-results.ts";
 import { atomicWriteJson, commandSucceeds, runJson, runText, toolResult } from "./utils.ts";
 import { buildWorkspaceContext, formatWorkspaceContext } from "./workspace-context.ts";
@@ -518,9 +518,9 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 		name: "maglev_pr_decisions",
 		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Decisions",
-		description: "List, get, upsert, or delete Maglev PR triage decisions in the durable decisions file.",
+		description: "List, get, upsert, or delete durable Maglev PR decisions. Explicit basis is evaluated evidence, never replaced by current facts. Upsert mode record-only merges observations without refreshing a recommendation.",
 		promptSnippet: "Read or update durable Maglev PR triage decisions.",
-		promptGuidelines: ["Use maglev_pr_decisions to persist Maglev PR buckets; do not edit decision JSON files directly.", "Use absolute dates in durable decision text; avoid relative temporal phrases like today, yesterday, recently, or this morning."],
+		promptGuidelines: ["Use maglev_pr_decisions to persist Maglev PR buckets; do not edit decision JSON files directly.", "Use absolute dates in durable decision text; avoid relative temporal phrases like today, yesterday, recently, or this morning.", "Supply the head and discussionUpdatedAt actually evaluated. Missing basis is not filled from the current snapshot. Use decision.mode record-only for failed/incomplete or non-accepted analyses; their attempt-specific evidence belongs in observations."],
 		parameters: DecisionsParamsSchema,
 		async execute(_toolCallId, params, signal) {
 			if (params.operation === "list") {
@@ -538,8 +538,11 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 			}
 			if (params.operation === "upsert") {
 				if (!params.decision) throw new Error("operation upsert requires decision");
-				const decision = await saveDecision(params.pr, params.decision, { decisionsFile: DECISIONS_FILE, signal, loadDecisions, writeDecisions, loadSnapshot });
-				return toolResult(`Saved decision for #${params.pr}: ${decision.bucket} — ${decision.reason}`, { decisionsFile: DECISIONS_FILE, decision });
+				const decision = await saveDecision(params.pr, params.decision, { decisionsFile: DECISIONS_FILE, signal, loadDecisions, writeDecisions });
+				const { snapshot, warning: snapshotWarning } = await loadSnapshotOptional();
+				const applicability = assessRecommendation(snapshot?.pullRequests.find((pr) => pr.number === params.pr), decision);
+				const action = params.decision.mode === "record-only" ? "Recorded observations without reevaluating recommendation" : "Saved decision";
+				return toolResult(`${action} for #${params.pr}: ${decision.bucket} — ${decision.reason}\nApplicability: ${applicability.status}${applicability.reasons.length ? ` — ${applicability.reasons.join("; ")}` : ""}${snapshotWarning ? `\nSnapshot warning: ${snapshotWarning}` : ""}`, { decisionsFile: DECISIONS_FILE, decision, applicability, snapshotWarning });
 			}
 			throw new Error(`Unknown decision operation: ${(params as { operation: string }).operation}`);
 		},
