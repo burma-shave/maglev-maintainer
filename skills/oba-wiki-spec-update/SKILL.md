@@ -31,10 +31,10 @@ The handoff should enumerate updates with stable spec-deviation IDs such as `SD-
 
 ## Phase 1: Resolve wiki and Java repos
 
-Use `maglev_companion_repos_resolve` directly or the packaged `oba-workspace` skill to resolve `maglev.wiki` and the legacy Java reference repo:
+Use `maglev_companion_repos_resolve` directly or the packaged `maglev-companion-repos` skill to resolve `maglev.wiki` and the legacy Java reference repo:
 
 ```text
-/skill:oba-workspace maglev.wiki oba-java
+/skill:maglev-companion-repos maglev.wiki oba-java
 ```
 
 `oba-java` is an alias for `onebusaway-application-modules` and is treated as reference-only, so the resolver fast-forwards it when safe. If the resolver reports anomalies for either repo, stop on error anomalies and include warning/note caveats in the final response.
@@ -164,5 +164,5 @@ Report:
 - update IDs handled
 - files changed
 - local commit hash/message
-- any caveats from `maglev_companion_repos_resolve` / packaged `oba-workspace`
+- any caveats from `maglev_companion_repos_resolve` / packaged `maglev-companion-repos`
 - anything intentionally not updated and why

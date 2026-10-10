@@ -7,7 +7,7 @@ description: Finds and reads Maglev wiki OBA API endpoint specs. Use when a user
 
 Use this lightweight skill to locate `maglev.wiki` OBA API specs and, when requested, read the relevant endpoint page. This is intentionally read-only and does not perform PR review, client-impact analysis, Java behavior confirmation, or wiki edits.
 
-This packaged version can run from a normal `maglev` checkout or PR Bench checkout. Call `maglev_workspace_context` first and resolve `maglev.wiki` through the packaged `oba-workspace` skill / `maglev_companion_repos_resolve` tool.
+This packaged version can run from a normal `maglev` checkout or PR Bench checkout. Call `maglev_workspace_context` first and resolve `maglev.wiki` through the packaged `maglev-companion-repos` skill / `maglev_companion_repos_resolve` tool.
 
 ## Arguments
 
@@ -17,10 +17,10 @@ Optional:
 
 ## Spec locations
 
-Resolve the wiki checkout through the packaged `oba-workspace` skill or directly with `maglev_companion_repos_resolve`:
+Resolve the wiki checkout through the packaged `maglev-companion-repos` skill or directly with `maglev_companion_repos_resolve`:
 
 ```text
-/skill:oba-workspace maglev.wiki
+/skill:maglev-companion-repos maglev.wiki
 ```
 
 Then use:
@@ -38,7 +38,7 @@ Endpoint names normally use hyphens, not underscores: `stops-for-route.md`, not 
 
 ### 1. Resolve the wiki repo
 
-Call `maglev_workspace_context`, then invoke `maglev_companion_repos_resolve` or packaged `oba-workspace` for `maglev.wiki`. Include any workspace caveats in the final response; a stale or locally modified wiki checkout may affect what spec text was read.
+Call `maglev_workspace_context`, then invoke `maglev_companion_repos_resolve` or packaged `maglev-companion-repos` for `maglev.wiki`. Include any workspace caveats in the final response; a stale or locally modified wiki checkout may affect what spec text was read.
 
 ### 2. Read the endpoint index
 

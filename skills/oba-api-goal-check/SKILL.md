@@ -17,7 +17,7 @@ Typically invoked by `oba-api-change-review`. Call directly only when you have a
 ## Workspace layout
 
 - **Spec index**: `OBA-API-Specs.md` in the `maglev.wiki` repo — read this first as the endpoint-to-page map.
-- **Endpoint spec**: `<endpoint>.md` in the `maglev.wiki` repo — resolve the repo's local path via `maglev_companion_repos_resolve` or the packaged `oba-workspace` skill (argument: `maglev.wiki`). Some endpoints map to multiple pages in the index; read every relevant page for the stated goal.
+- **Endpoint spec**: `<endpoint>.md` in the `maglev.wiki` repo — resolve the repo's local path via `maglev_companion_repos_resolve` or the packaged `maglev-companion-repos` skill (argument: `maglev.wiki`). Some endpoints map to multiple pages in the index; read every relevant page for the stated goal.
 - **Maglev handler**: `internal/restapi/<endpoint>_handler.go` (relative to the `maglev` repo root) — handler filenames use underscores throughout, e.g. `stops-for-route` → `stops_for_route_handler.go`, so convert every hyphen in the endpoint name to an underscore before looking for the file.
 - **Maglev tests**: `internal/restapi/<endpoint>_handler_test.go` (relative to the `maglev` repo root, same hyphen-to-underscore conversion).
 
@@ -33,7 +33,7 @@ Extract the endpoint name and the specific behaviours, fields, parameters, or er
 
 ### 2. Read the relevant spec section
 
-Get the wiki repo's local path from `maglev_companion_repos_resolve` / packaged `oba-workspace` (see Workspace layout above); include any caveats it reports in the final report, since the spec being read may be out of date. Read `<path>/OBA-API-Specs.md` first to confirm the endpoint's page mapping. Then read the section(s) of `<path>/<endpoint>.md`, plus any additional pages the index maps to the endpoint, that correspond to the stated goal. Confirm what correct behaviour looks like according to the spec.
+Get the wiki repo's local path from `maglev_companion_repos_resolve` / packaged `maglev-companion-repos` (see Workspace layout above); include any caveats it reports in the final report, since the spec being read may be out of date. Read `<path>/OBA-API-Specs.md` first to confirm the endpoint's page mapping. Then read the section(s) of `<path>/<endpoint>.md`, plus any additional pages the index maps to the endpoint, that correspond to the stated goal. Confirm what correct behaviour looks like according to the spec.
 
 ### 3. Get the diff
 

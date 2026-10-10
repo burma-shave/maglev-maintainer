@@ -32,11 +32,11 @@ not default to checkout-local `tmp/` or start a Bench solely for storage.
 Review production and draft packaging are independent: settled findings from
 these API reviews can feed `maglev-pr-review-draft` when a draft is requested.
 That skill writes through `maglev_pr_review_draft_save`; no GitHub review is submitted.
-For a separately requested publication script, use `privileged-handoff-script`.
+For a separately requested publication script, use `maglev-handoff-script`.
 
 ## Companion repos
 
-Client/spec/Java checks resolve companion repos through `maglev_companion_repos_resolve` or the packaged `oba-workspace` skill. By default checkouts live under:
+Client/spec/Java checks resolve companion repos through `maglev_companion_repos_resolve` or the packaged `maglev-companion-repos` skill. By default checkouts live under:
 
 ```text
 /var/lib/maglev-maintainer/companion-repos

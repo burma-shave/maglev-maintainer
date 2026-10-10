@@ -1,5 +1,5 @@
 ---
-name: legacy-oba-api
+name: maglev-legacy-api-runtime
 description: Start, inspect, or stop the pinned legacy Java OneBusAway API service using an isolated Docker Compose runtime.
 ---
 

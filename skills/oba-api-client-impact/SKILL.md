@@ -16,7 +16,7 @@ Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-revie
 
 ## Workspace layout
 
-Each client repo is resolved via the packaged `oba-workspace` skill / `maglev_companion_repos_resolve` tool, which returns each repo's local path and anomalies. Paths below are relative to that resolved root:
+Each client repo is resolved via the packaged `maglev-companion-repos` skill / `maglev_companion_repos_resolve` tool, which returns each repo's local path and anomalies. Paths below are relative to that resolved root:
 
 - **JS SDK resource** (repo: `js-sdk`): `src/resources/<endpoint>.ts`, `src/resources/shared.ts`
 - **Wayfinder API route** (repo: `wayfinder`): `src/routes/api/oba/<endpoint>/+server.js` (if it exists) — note `.js`, not `.ts`. If the endpoint takes a path parameter, the file lives one level deeper under a bracketed folder named for that parameter, e.g. `src/routes/api/oba/stops-for-route/[routeId]/+server.js` — the bracket name varies per endpoint (`[id]`, `[stopId]`, `[tripId]`, …), so list the endpoint's directory rather than guessing the exact folder name.

@@ -1,10 +1,10 @@
 ---
-name: privileged-handoff-script
+name: maglev-handoff-script
 description: Generate executable Maglev maintainer scripts for a human to run in an environment with GitHub write access or other privileges unavailable to sandboxed Pi. Use when asked for an issue-creation, review-submission, labeling, or other privileged-operation script; generating a script never authorizes executing the operation.
 compatibility: Requires the Maglev Maintainer workspace context tool; generated shell scripts require Bash and their declared runtime dependencies.
 ---
 
-# Privileged handoff script
+# Maglev Handoff Script
 
 Pi commonly runs as a sandboxed user with read-only GitHub access. Prepare a
 reviewable script for the maintainer's authenticated environment instead of

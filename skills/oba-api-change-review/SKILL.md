@@ -11,7 +11,7 @@ Use this for a focused behavior review of a PR, branch, working tree, or propose
 
 This Maglev Maintainer packaged skill is meant to run from a normal `maglev` checkout or from a PR Bench checkout. At the start, call `maglev_workspace_context`; if the source is a PR number, pass that PR number. Use the returned current/target PR Bench paths, artifact directories, and companion repo resolver capability instead of assuming `/workspace` or repo-local output paths.
 
-`oba-api-client-impact` needs source from `wayfinder`, `js-sdk`, `onebusaway-ios`, and `onebusaway-android`; Java-behavior checks may need `onebusaway-application-modules` / `oba-java`; `oba-api-spec-check` and `oba-api-goal-check` need `maglev.wiki`. Resolve those through the packaged `oba-workspace` skill / `maglev_companion_repos_resolve` tool and include any caveats in the final report.
+`oba-api-client-impact` needs source from `wayfinder`, `js-sdk`, `onebusaway-ios`, and `onebusaway-android`; Java-behavior checks may need `onebusaway-application-modules` / `oba-java`; `oba-api-spec-check` and `oba-api-goal-check` need `maglev.wiki`. Resolve those through the packaged `maglev-companion-repos` skill / `maglev_companion_repos_resolve` tool and include any caveats in the final report.
 
 ## Wiki specs quick reference
 

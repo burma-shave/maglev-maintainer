@@ -1,5 +1,5 @@
 ---
-name: maglev-api
+name: maglev-api-runtime
 description: Start, inspect, or stop a local Maglev API service from a checkout or PR Bench using an isolated Docker Compose runtime.
 ---
 

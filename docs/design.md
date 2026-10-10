@@ -198,7 +198,7 @@ Skills orchestrate policy and inference using deterministic tools:
 - `maglev-pr-code-review` runs Claude Code and focused validation; a standalone request does not mutate drafts. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. The current explicit kickoff composes these two; it is not triggered by Bench startup.
 - OBA API/spec skills provide a distinct behavior/client/spec review and may hand settled findings to the shared draft skill when requested. They resolve companion repos through the package tools, not hard-coded sibling paths or shell resolver scripts.
 - `maglev-artifacts` organizes working artifacts and delegates tool-owned state or generated-script mutations to their dedicated tools/skills. It places maintainer working reports/handoffs in the applicable `artifacts.targetReportsDir` for PR or branch Benches; without an applicable Bench, use `<maintainerRoot>/plans/`. Association preserves paths, and explicit destinations take precedence. Never default to checkout-local `tmp/`.
-- `privileged-handoff-script` generates reviewable executable scripts under `artifacts.generatedScriptsDir`, mode `0755`. Human execution performs listed writes immediately unless preview/apply gates were explicitly requested. Generation does not authorize execution or publication.
+- `maglev-handoff-script` generates reviewable executable scripts under `artifacts.generatedScriptsDir`, mode `0755`. Human execution performs listed writes immediately unless preview/apply gates were explicitly requested. Generation does not authorize execution or publication.
 
 ## Known safety/freshness limitations
 

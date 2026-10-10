@@ -91,6 +91,35 @@ test("packaged skill names and relative skill handoffs remain consistent", async
 	}
 });
 
+test("supporting skill names use Maglev ownership and preserve workflow safeguards", async () => {
+	const docs = await skillDocs();
+	const names = new Set(docs.map(({ name }) => name));
+	for (const [former, current] of [
+		["oba-workspace", "maglev-companion-repos"],
+		["maglev-api", "maglev-api-runtime"],
+		["legacy-oba-api", "maglev-legacy-api-runtime"],
+		["privileged-handoff-script", "maglev-handoff-script"],
+	]) {
+		assert.ok(names.has(current), `missing skill ${current}`);
+		assert.ok(!names.has(former), `unexpected legacy skill ${former}`);
+		for (const { name, text } of docs) {
+			assert.ok(!text.includes(`\`${former}\``), `${name} references former skill ${former}`);
+		}
+	}
+	for (const name of ["maglev-api-runtime", "maglev-legacy-api-runtime"]) {
+		const text = await read(`skills/${name}/SKILL.md`);
+		assert.match(text, /Manage service lifecycle only/);
+		assert.match(text, /explicit permission/);
+		assert.match(text, /maglev_api_runtime_start/);
+	}
+	const handoff = await read("skills/maglev-handoff-script/SKILL.md");
+	assert.match(handoff, /Do not execute\s+the generated script/);
+	assert.match(handoff, /mode `0755`/);
+	const repos = await read("skills/maglev-companion-repos/SKILL.md");
+	assert.match(repos, /does not pull it automatically/);
+	assert.match(repos, /warning.*note/);
+});
+
 test("one Bench skill covers branches and PR adapters without weakening safeguards", async () => {
 	const names = new Set((await skillDocs()).map(({ name }) => name));
 	assert.ok(names.has("maglev-bench"));

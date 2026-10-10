@@ -9,7 +9,7 @@ Use this skill to review a Maglev pull request for OBA API / legacy Java / wiki 
 
 Use this when you need the full PR/spec-maintenance process: confirm the true PR diff, gather PR comments, run/reuse `oba-api-change-review`, enumerate spec-deviation decisions with stable `SD-*` IDs, walk the user through those decisions, and write wiki/actionable-comment handoff files. For a smaller standalone behavior review, use `oba-api-change-review`.
 
-This packaged version is integrated with Maglev Maintainer. At the start, call `maglev_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_companion_repos_resolve` / packaged `oba-workspace`, not shell resolver scripts or hard-coded `/workspace` paths.
+This packaged version is integrated with Maglev Maintainer. At the start, call `maglev_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_companion_repos_resolve` / packaged `maglev-companion-repos`, not shell resolver scripts or hard-coded `/workspace` paths.
 
 ## Wiki specs quick reference
 
@@ -77,10 +77,10 @@ Use `origin/<baseRefName>...HEAD`, not `branch..HEAD`, because long-lived branch
 Resolve the legacy Java repo before evaluating Java behavior using `maglev_companion_repos_resolve` directly or the packaged skill:
 
 ```text
-/skill:oba-workspace oba-java
+/skill:maglev-companion-repos oba-java
 ```
 
-`oba-java` is an alias for `onebusaway-application-modules` and is treated as a reference-only repo, so the resolver fast-forwards it when safe. Include any resolver caveats in the final report. If an issue requires checking client impact and the API change review did not already do that, resolve the client repos through `maglev_companion_repos_resolve` / packaged `oba-workspace` before running `oba-api-client-impact`.
+`oba-java` is an alias for `onebusaway-application-modules` and is treated as a reference-only repo, so the resolver fast-forwards it when safe. Include any resolver caveats in the final report. If an issue requires checking client impact and the API change review did not already do that, resolve the client repos through `maglev_companion_repos_resolve` / packaged `maglev-companion-repos` before running `oba-api-client-impact`.
 
 ### 2. Run OBA API review
 
@@ -355,7 +355,7 @@ validation evidence to the packaged draft skill; no separate draft request is ne
 
 That skill uses `maglev_pr_review_draft_save` to validate diff locations and save the
 centralized draft; it does not publish. If the maintainer separately requests a
-publication script, use `privileged-handoff-script` with that saved draft. Preserve
+publication script, use `maglev-handoff-script` with that saved draft. Preserve
 user approval before publication; creating either artifact never authorizes
 executing a GitHub write.
 

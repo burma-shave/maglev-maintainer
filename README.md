@@ -60,6 +60,19 @@ State paths, draft JSON format, Bench identities, runtime identities, and lifecy
 behavior are unchanged. Metadata tool names and existing runtime skill names are
 unchanged by this migration.
 
+The subsequent skill naming cleanup replaces the following directories and
+`/skill:` names, without compatibility aliases:
+
+| Former skill | Current skill |
+| --- | --- |
+| `oba-workspace` | `maglev-companion-repos` |
+| `maglev-api` | `maglev-api-runtime` |
+| `legacy-oba-api` | `maglev-legacy-api-runtime` |
+| `privileged-handoff-script` | `maglev-handoff-script` |
+
+Reload Pi and update explicit skill paths/invocations. Workflow behavior and
+metadata tool names are unchanged.
+
 ## Resources
 
 - Extension: `extensions/index.ts`
@@ -102,16 +115,16 @@ unchanged by this migration.
   - `maglev_pr_bench_close` (dry-run by default; can execute with explicit `apply`)
 - Skills:
   - `maglev-artifacts` (placement and organization of working artifacts; dedicated tools retain ownership of canonical state)
-  - `privileged-handoff-script` (executable scripts for operations performed outside sandboxed Pi)
+  - `maglev-handoff-script` (executable scripts for operations performed outside sandboxed Pi)
   - `maglev-bug-triage` (issue numbers/URLs or free-text reports; conversation-only verdict, severity, and fix effort)
   - `maglev-pr-triage`
   - `maglev-pr-code-review` (Claude Code review plus focused validation and automatic draft handoff for settled findings)
   - `maglev-pr-review-draft` (packages settled findings as prospective review JSON; never submits)
   - `maglev-bench` (one lifecycle skill for branch and PR environments, including PR association and reset)
   - `maglev-checkout`
-  - `oba-workspace`
-  - `maglev-api`
-  - `legacy-oba-api`
+  - `maglev-companion-repos`
+  - `maglev-api-runtime`
+  - `maglev-legacy-api-runtime`
   - `oba-api-change-review`
   - `oba-api-client-impact`
   - `oba-api-goal-check`
@@ -158,7 +171,7 @@ background only. Run `/reload` to discover the new skills.
 
 ## Privileged handoff scripts
 
-Use `privileged-handoff-script` when Pi lacks GitHub write access and the
+Use `maglev-handoff-script` when Pi lacks GitHub write access and the
 maintainer asks for a script to run in an authenticated environment. Generated
 handoffs live in `artifacts.generatedScriptsDir` from workspace context:
 `<maintainerRoot>/scripts/` (normally `/var/lib/maglev-maintainer/scripts/`).
@@ -260,7 +273,7 @@ triage reports the blocker rather than silently loading every PR into the parent
 
 ## Live API runtimes
 
-Use the `maglev-api` and `legacy-oba-api` skills to start, inspect, or stop local
+Use the `maglev-api-runtime` and `maglev-legacy-api-runtime` skills to start, inspect, or stop local
 services. These skills manage service lifecycle only and do not prescribe any
 subsequent use of the running service. All three `maglev_api_runtime_*` tools take
 `implementation: "maglev" | "legacy"`.

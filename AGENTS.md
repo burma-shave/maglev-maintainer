@@ -159,7 +159,7 @@ Respect explicitly requested destinations. Repository documentation intended for
 commit belongs in the repository. Do not default reports to checkout-local `tmp/`.
 
 Generated privileged scripts belong in `artifacts.generatedScriptsDir`, mode
-`0755`. Follow `privileged-handoff-script`: human execution performs writes
+`0755`. Follow `maglev-handoff-script`: human execution performs writes
 immediately unless preview/apply gates were explicitly requested. Generation and
 syntax validation never authorize executing the script or publishing to GitHub.
 

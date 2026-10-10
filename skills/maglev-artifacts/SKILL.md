@@ -36,7 +36,7 @@ artifacts merely to make their layout more consistent.
 | Reports or handoffs without an applicable Bench | `<maintainerRoot>/plans/<topic>.md`; never a default checkout-local `tmp/` fallback |
 | Documentation explicitly intended for a repository commit | Follow that repository's documentation instructions and existing layout |
 | Canonical wiki specifications or approved wiki updates | Follow the relevant wiki skill and repository instructions |
-| Generated privileged handoff scripts | Returned `artifacts.generatedScriptsDir`; follow `../privileged-handoff-script/SKILL.md` for generation and validation, never execute merely because a script was generated |
+| Generated privileged handoff scripts | Returned `artifacts.generatedScriptsDir`; follow `../maglev-handoff-script/SKILL.md` for generation and validation, never execute merely because a script was generated |
 | Prospective GitHub review JSON, triage state, Bench manifests, and runtime files/logs | Use their dedicated maintainer tools; do not manually mutate or move tool-owned artifacts |
 
 The existing general release plan is:
