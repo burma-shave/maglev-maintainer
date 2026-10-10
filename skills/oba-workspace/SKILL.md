@@ -1,12 +1,12 @@
 ---
 name: oba-workspace
-compatibility: Requires the Maglev PR Maintainer extension tools.
-description: Resolves local checkout paths for OBA companion repos such as maglev.wiki, wayfinder, js-sdk, onebusaway-ios, onebusaway-android, and legacy Java through the Maglev PR Maintainer framework.
+compatibility: Requires the Maglev Maintainer extension tools.
+description: Resolves local checkout paths for OBA companion repos such as maglev.wiki, wayfinder, js-sdk, onebusaway-ios, onebusaway-android, and legacy Java through the Maglev Maintainer framework.
 ---
 
 # OBA Workspace
 
-Resolve OBA companion repos through Maglev PR Maintainer tools instead of shell resolver scripts or hard-coded `/workspace` assumptions.
+Resolve OBA companion repos through Maglev Maintainer tools instead of shell resolver scripts or hard-coded `/workspace` assumptions.
 
 Use this skill when OBA API/spec review skills need local source for:
 

@@ -1,6 +1,6 @@
 ---
 name: maglev-pr-review-draft
-compatibility: Requires the Maglev PR Maintainer extension tools and GitHub read access for draft validation.
+compatibility: Requires the Maglev Maintainer extension tools and GitHub read access for draft validation.
 description: Create, revise, inspect, or clear prospective Maglev PR review JSON from already-settled findings using the review JSON tools. Use automatically whenever settled actionable PR review findings emerge in any context, or when discussing a saved draft; never submits to GitHub or performs a new code review.
 ---
 

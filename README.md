@@ -1,8 +1,8 @@
-# Maglev PR Maintainer
+# Maglev Maintainer
 
-Pi package for maintaining `OneBusAway/maglev` pull requests.
+Pi package for maintaining `OneBusAway/maglev` branches and pull requests.
 
-- **Maglev PR Maintainer**: the top-level package/workflow.
+- **Maglev Maintainer**: the top-level package/workflow.
 - **Bench**: a branch-based working environment (independent plain checkout + tmux session + `pi` window + artifacts).
 - **PR Bench**: a Bench specialized by a PR association. Existing `pr-N` identities, paths, branches, and commands remain supported; a branch Bench can acquire a PR association without being moved or restarted.
 
@@ -10,6 +10,30 @@ The package manifest exposes `extensions/`, `skills/`, and the packaged triage a
 Installation and discovery depend on each deployment's Pi settings. From this
 repository root, load it explicitly for isolated development as shown below;
 avoid simultaneously loading the old global Maglev extension or loose skills.
+
+## Package rename and configuration
+
+The package is now `maglev-maintainer` (Maglev Maintainer). Package-wide commands
+are `/maglev-maintainer-info` and `/maglev-maintainer-status`; PR-specific tool,
+command, and skill names remain unchanged. The triage agent is now
+`maglev-maintainer.pr-triage-analyst`; update any agent model overrides accordingly.
+Reload Pi after updating. Local-path installs keep working from the same checkout;
+this change does not rename the repository directory or modify Pi settings.
+
+New installs default to `/var/lib/maglev-maintainer`. Existing state is **not** moved
+or discovered automatically. To retain existing Benches, runtime identities, and
+state, set `MAGLEV_MAINTAINER_ROOT` to your existing root (for example,
+`/var/lib/maglev-pr-maintainer`) before reloading. The old explicit
+`MAGLEV_PR_MAINTAINER_ROOT` environment variable remains supported when the new
+variable is unset; the new variable takes precedence. Do not move active Bench
+checkouts or runtime state as part of a branding change.
+
+`package.json` is the source of runtime package identity. `extensions/identity.ts`
+derives display name, package-wide commands, root configuration, and triage agent
+name. Workspace context exposes these under `package` so skills can use returned
+identifiers. Future renames still need to update documentation, skill prose, agent
+frontmatter, and deployment overrides; identity tests detect manifest/agent/skill
+drift. Stable tool names and durable Bench identities are independent of branding.
 
 ## Resources
 
@@ -26,8 +50,8 @@ avoid simultaneously loading the old global Maglev extension or loose skills.
   - `/maglev-pr-bench-reset`
   - `/maglev-pr-bench-close`
   - `/maglev-pr-review-json`
-  - `/maglev-pr-maintainer-status`
-  - `/maglev-pr-maintainer-info`
+  - `/maglev-maintainer-status`
+  - `/maglev-maintainer-info`
   - `maglev_pr_workspace_context`
   - `maglev_pr_companion_repos`
   - `maglev_pr_checkout` (resolve/clone Maglev source outside a PR Bench; dry-run by default)
@@ -72,7 +96,7 @@ avoid simultaneously loading the old global Maglev extension or loose skills.
   - `oba-api-pr-spec-review`
   - `oba-wiki-spec-update`
 - Agents (requires `pi-subagents`):
-  - `maglev-pr-maintainer.pr-triage-analyst` — read-only per-PR snapshot analysis, returning a compact triage recommendation in a fresh context
+  - `maglev-maintainer.pr-triage-analyst` — read-only per-PR snapshot analysis, returning a compact triage recommendation in a fresh context
 Bench lifecycle is implemented directly in the package, not through legacy
 `prrs-*` scripts. Generated privileged handoff scripts live outside package source
 under the configured maintainer root.
@@ -81,17 +105,17 @@ under the configured maintainer root.
 
 `maglev_pr_checkout` resolves Maglev itself at `<maintainer-root>/checkouts/maglev`, or `$OBA_WORKSPACE/maglev`. Pass `path` to select another checkout root. Missing checkouts are planned by default; `apply: true` clones the remote default branch, or checks out an explicit branch/tag/SHA (`ref`) at detached HEAD in a new clone. Existing checkouts are validated and inspected without fetching, updating, switching, or resetting; a supplied ref must already resolve locally to HEAD. Dirty work is preserved. Results include `ready`, revision, branch, dirty state, and warnings. `ok: true` with `ready: false` is a plan only. Failed clones clean up only their temporary staging directory. This tool does not create a PR Bench or start services. The workspace context exposes its path and capability name; use the `maglev-checkout` skill for the safe workflow.
 
-`maglev_pr_companion_repos` resolves OBA companion repos under `/var/lib/maglev-pr-maintainer/companion-repos` by default, or under `$OBA_WORKSPACE` when explicitly set. Reference-only repos (`wayfinder`, `js-sdk`, mobile clients, and legacy Java) are cloned on first use and fast-forwarded when clean on `main`/`master`; editable `maglev.wiki` is cloned on first use but not pulled automatically after that. Tool warnings/notes should be carried into OBA API review reports as caveats.
+`maglev_pr_companion_repos` resolves OBA companion repos under `/var/lib/maglev-maintainer/companion-repos` by default, or under `$OBA_WORKSPACE` when explicitly set. Reference-only repos (`wayfinder`, `js-sdk`, mobile clients, and legacy Java) are cloned on first use and fast-forwarded when clean on `main`/`master`; editable `maglev.wiki` is cloned on first use but not pulled automatically after that. Tool warnings/notes should be carried into OBA API review reports as caveats.
 
 Current PR queue support is read-only: `/maglev-prs` joins the GitHub snapshot, durable decisions, stale/missing decision detection, and local PR Bench status into a session report. Optional PR-number arguments filter the queue. Reports are stored as TUI-only custom entries and do not enter model context. Use `maglev_pr_state_query` when the assistant needs exact joined state in model context; it returns selected snapshot, decision, needs-inference, and PR Bench fields as JSON text so callers should not craft ad-hoc Python/JQ scripts to read state files.
 
-Prospective PR review JSON supports local creation, replacement, deletion, listing, and read-only viewing: `maglev_pr_review_json` writes or overwrites the current validated JSON draft at `/var/lib/maglev-pr-maintainer/review-json/pr-<N>.json`, `maglev_pr_review_json_clear` deletes that draft when there should be no prospective review, `maglev_pr_review_json_list` finds current drafts, and `maglev_pr_review_json_load` loads one into model context as readable Markdown plus structured JSON details. `/maglev-pr-review-json [PR number | path]` opens a scrollable TUI viewer for the current draft for a PR or an exact artifact path; press `d` in the viewer to ask the agent to load that draft for discussion.
+Prospective PR review JSON supports local creation, replacement, deletion, listing, and read-only viewing: `maglev_pr_review_json` writes or overwrites the current validated JSON draft at `/var/lib/maglev-maintainer/review-json/pr-<N>.json`, `maglev_pr_review_json_clear` deletes that draft when there should be no prospective review, `maglev_pr_review_json_list` finds current drafts, and `maglev_pr_review_json_load` loads one into model context as readable Markdown plus structured JSON details. `/maglev-pr-review-json [PR number | path]` opens a scrollable TUI viewer for the current draft for a PR or an exact artifact path; press `d` in the viewer to ask the agent to load that draft for discussion.
 
 PR Bench start policy separates review readiness from checkout safety: draft status, failing checks, pinned decisions, stale/missing triage inference, merge conflicts, and missing stack-parent Benches are informational and never require extra acknowledgement to open a review Bench. Stale/incomplete snapshot data and existing Bench HEAD mismatches still require explicit acknowledgement; path/identity refusals and destructive reset/close safeguards remain unchanged. Legacy readiness-related `allow*` start options are accepted as no-ops.
 
-PR Bench lifecycle support is implemented directly: read-only list/inspect can find `/var/lib/maglev-pr-maintainer/checkouts/pr-N` checkouts, tmux `pr-N` sessions, the tmux `pi` window, classified dirty state, and snapshot freshness. `maglev_pr_bench_start` defaults to a dry-run start/reuse safety plan; `apply` creates a plain checkout with `gh repo clone`, checks out the PR with `gh pr checkout --branch pr-N`, verifies the checkout HEAD against the snapshot, and starts tmux with a `pi` window running `pi --name "Review PR #N"` from the PR Bench checkout. Starting or recovering a Bench does not generate a kickoff file, submit an initial user prompt, or automatically run a review. An agent may pass optional free-form `context` to `maglev_pr_bench_start` to hand off goals, findings, constraints, and references. When a new Pi window is launched, the caller's context is saved to a unique `benches/pr-N/context-<id>.md` file and loaded via `--append-system-prompt`; this supplies background context without triggering an agent turn. Blank context is ignored. Dry runs write no files. Context is refused when reusing an existing Pi window, rather than silently dropped or sent as terminal input. On explicit request, `maglev_pr_bench_kickoff` returns the read-only review instructions and PR snapshot/triage context to the calling agent, with optional additional `context`. It does not send input to another Pi session or execute the review itself; the calling agent follows the instructions using `maglev_pr_code_review` from the specified checkout. Bench start no longer accepts `kickoff` or `kickoffContext` options. It can also complete safe partial PR Benches, such as an existing checkout missing the PR branch, tmux session, or `pi` window. `gh pr checkout` handles same-repo and fork PR checkout/push configuration inside the independent PR Bench checkout. `maglev_pr_bench_close` defaults to a dry-run close plan with warnings/refusals and executes only with explicit `apply` after required warning acknowledgements. Use `/maglev-pr-benches`, optionally with PR numbers, to print the same data as a session report that does not enter model context.
+PR Bench lifecycle support is implemented directly: read-only list/inspect can find `/var/lib/maglev-maintainer/checkouts/pr-N` checkouts, tmux `pr-N` sessions, the tmux `pi` window, classified dirty state, and snapshot freshness. `maglev_pr_bench_start` defaults to a dry-run start/reuse safety plan; `apply` creates a plain checkout with `gh repo clone`, checks out the PR with `gh pr checkout --branch pr-N`, verifies the checkout HEAD against the snapshot, and starts tmux with a `pi` window running `pi --name "Review PR #N"` from the PR Bench checkout. Starting or recovering a Bench does not generate a kickoff file, submit an initial user prompt, or automatically run a review. An agent may pass optional free-form `context` to `maglev_pr_bench_start` to hand off goals, findings, constraints, and references. When a new Pi window is launched, the caller's context is saved to a unique `benches/pr-N/context-<id>.md` file and loaded via `--append-system-prompt`; this supplies background context without triggering an agent turn. Blank context is ignored. Dry runs write no files. Context is refused when reusing an existing Pi window, rather than silently dropped or sent as terminal input. On explicit request, `maglev_pr_bench_kickoff` returns the read-only review instructions and PR snapshot/triage context to the calling agent, with optional additional `context`. It does not send input to another Pi session or execute the review itself; the calling agent follows the instructions using `maglev_pr_code_review` from the specified checkout. Bench start no longer accepts `kickoff` or `kickoffContext` options. It can also complete safe partial PR Benches, such as an existing checkout missing the PR branch, tmux session, or `pi` window. `gh pr checkout` handles same-repo and fork PR checkout/push configuration inside the independent PR Bench checkout. `maglev_pr_bench_close` defaults to a dry-run close plan with warnings/refusals and executes only with explicit `apply` after required warning acknowledgements. Use `/maglev-pr-benches`, optionally with PR numbers, to print the same data as a session report that does not enter model context.
 
-Use `/maglev-pr-maintainer-status` to check root writability, snapshot availability/count, decision file status, active PR Bench count, `gh auth status`, and `tmux` availability.
+Use `/maglev-maintainer-status` to check root writability, snapshot availability/count, decision file status, active PR Bench count, `gh auth status`, and `tmux` availability.
 
 ## Review and draft skills
 
@@ -113,7 +137,7 @@ background only. Run `/reload` to discover the new skills.
 Use `privileged-handoff-script` when Pi lacks GitHub write access and the
 maintainer asks for a script to run in an authenticated environment. Generated
 handoffs live in `artifacts.generatedScriptsDir` from workspace context:
-`<maintainerRoot>/scripts/` (normally `/var/lib/maglev-pr-maintainer/scripts/`).
+`<maintainerRoot>/scripts/` (normally `/var/lib/maglev-maintainer/scripts/`).
 They are not package source helpers or per-Bench artifacts.
 
 Scripts use mode `0755`, so all users can read and execute them by absolute path
@@ -183,7 +207,7 @@ work/artifacts. CLI equivalents are `--allow-dirty`, `--allow-local-commits`,
 ## Delegated PR triage
 
 The `maglev-pr-triage` skill delegates each selected PR's detailed discussion,
-review, commit, and blocker analysis to `maglev-pr-maintainer.pr-triage-analyst`.
+review, commit, and blocker analysis to `maglev-maintainer.pr-triage-analyst`.
 The parent passes only the PR number, snapshot identity, as-of timestamp, cwd,
 and maintainer constraints—not the full PR metadata or parent transcript. The
 analyst retrieves only its assigned PR through the deterministic tools and
@@ -196,7 +220,7 @@ Install/load `pi-subagents` alongside this package. Agent discovery uses
 `pi.subagents.agents` in `package.json`; run `/reload` after resource changes.
 The agent explicitly loads this package's extension for its read-only tool
 allowlist. It inherits the deployment's model choice; configure
-`subagents.agentOverrides.maglev-pr-maintainer.pr-triage-analyst.model` in Pi
+`subagents.agentOverrides.maglev-maintainer.pr-triage-analyst.model` in Pi
 settings to choose a different analysis model. Multiple PRs use bounded fresh
 context fanout (at most three active analysts). If delegation is unavailable,
 triage reports the blocker rather than silently loading every PR into the parent.
@@ -274,6 +298,7 @@ Tests live in `tests/`; shared test fixtures and factories live in `testdata/`.
 The extension keeps Pi-specific adapter code separate from ordinary TypeScript functions:
 
 - `extensions/index.ts` — Pi registration only: commands, tools, schemas, UI calls, and tool-result formatting.
+- `extensions/identity.ts` — manifest-derived package identity, display name, command names, and root configuration.
 - `extensions/constants.ts` — repo names, schema versions, bucket constants, snapshot staleness threshold, and login sets.
 - `extensions/paths.ts` — the shared maintainer root path plus all root-relative state, checkout, bench, and review JSON paths.
 - `extensions/types.ts` — shared GitHub snapshot, decision, and PR Bench types.
@@ -292,7 +317,7 @@ The extension keeps Pi-specific adapter code separate from ordinary TypeScript f
 - `extensions/status.ts` — maintainer-root/state availability and command readiness checks.
 - `extensions/state-core.ts` — file-based snapshot/decision load/write helpers with injectable paths.
 - `extensions/state.ts` — production state helpers wired to the maintainer root paths.
-- `extensions/workspace-context.ts` — config/path/context payload for skills that need to run inside the same PR Maintainer framework.
+- `extensions/workspace-context.ts` — config/path/context payload for skills that need to run inside the same Maintainer framework.
 - `extensions/companion-repos.ts` — deterministic OBA companion repo resolver/updater for API/spec review skills.
 - `extensions/maglev-checkout.ts` — safe standalone Maglev checkout resolution and staged cloning.
 - `extensions/api-runtime.ts` — isolated Docker runtime planning, generated config, startup/readiness, inspection, and teardown.
@@ -315,10 +340,10 @@ Metadata refresh currently uses `gh pr list` followed by per-PR `gh pr view` cal
 
 ## Maintainer root
 
-All maintainer-owned state is rooted at `/var/lib/maglev-pr-maintainer` by default. Set `MAGLEV_PR_MAINTAINER_ROOT` to override it for development or non-system installs. For shared system use, make the root writable by a `maglev-pr-maintainer` group and add maintainer users to that group. Root-relative paths are:
+All maintainer-owned state is rooted at `/var/lib/maglev-maintainer` by default. Set `MAGLEV_MAINTAINER_ROOT` to override it for development or non-system installs. For shared system use, make the root writable by a `maglev-maintainer` group and add maintainer users to that group. Root-relative paths are:
 
 ```text
-/var/lib/maglev-pr-maintainer/
+/var/lib/maglev-maintainer/
   plans/ (general/cross-PR working documents and reports without a Bench)
   state/
     github-snapshot.json

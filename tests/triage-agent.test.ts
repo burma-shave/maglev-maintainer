@@ -11,7 +11,7 @@ test("package exposes the fresh-context read-only triage analyst", async () => {
 	const file = new URL("agents/pr-triage-analyst.md", root);
 	const agent = await readFile(file, "utf8");
 	assert.match(agent, /^name: pr-triage-analyst$/m);
-	assert.match(agent, /^package: maglev-pr-maintainer$/m);
+	assert.match(agent, /^package: maglev-maintainer$/m);
 	assert.match(agent, /^defaultContext: fresh$/m);
 	assert.match(agent, /^acceptanceRole: read-only$/m);
 	assert.match(agent, /^inheritSkills: true$/m);
@@ -29,7 +29,7 @@ test("package exposes the fresh-context read-only triage analyst", async () => {
 
 test("triage delegates without bulk metadata and keeps persistence in the parent", async () => {
 	const skill = await readFile(new URL("skills/maglev-pr-triage/SKILL.md", root), "utf8");
-	assert.ok(skill.includes("maglev-pr-maintainer.pr-triage-analyst"));
+	assert.ok(skill.includes("maglev-maintainer.pr-triage-analyst"));
 	assert.ok(skill.includes('context: "fresh"'));
 	assert.ok(skill.includes("at most three active analysts"));
 	assert.ok(skill.includes("Do not load all selected PRs' metadata into the parent"));

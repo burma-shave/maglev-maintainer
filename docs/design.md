@@ -1,4 +1,4 @@
-# Design: Maglev PR Maintainer
+# Design: Maglev Maintainer
 
 This document describes implemented architecture unless a section is explicitly
 marked planned. See `../README.md` for the current resource inventory and known
@@ -6,16 +6,25 @@ limitations; deployment/cutover status depends on the local Pi settings.
 
 ## Naming
 
-- Top-level workflow/package: **Maglev PR Maintainer**
+- Top-level workflow/package: **Maglev Maintainer**
 - General branch-based working environment: **Bench**
 - PR specialization of a Bench: **PR Bench**
 - Existing PR Benches contain:
-  - root-relative plain checkout path, currently `/var/lib/maglev-pr-maintainer/checkouts/pr-N`
+  - root-relative plain checkout path, currently `/var/lib/maglev-maintainer/checkouts/pr-N`
   - local branch `pr-N`
   - tmux session `pr-N`
   - tmux window `pi` running `pi` from the checkout root
 
 UI says **Bench** generally and **PR Bench** for PR-specialized operations. The implementation uses independent plain checkouts rather than git worktrees.
+
+Package identity is read from `package.json` by `extensions/identity.ts`, which
+derives display name, package-wide command names, root environment/default, and
+triage agent identity. Workspace context exposes these as `package` fields.
+PR-specific tool/command names and durable Bench IDs are not branding identifiers.
+The legacy explicit root environment variable is accepted only as a configuration
+alias; no legacy state paths are auto-discovered. Keep existing roots configured
+across renames to preserve active Bench paths and Docker runtime identity. See
+README for rename/cutover guidance.
 
 ## Shared Bench model
 
@@ -51,13 +60,13 @@ ID across association.
 
 ### GitHub snapshot file
 
-`/var/lib/maglev-pr-maintainer/state/github-snapshot.json`
+`/var/lib/maglev-maintainer/state/github-snapshot.json`
 
 Facts only, downloaded from GitHub. No inference, buckets, local bench state, or manual overrides.
 
 ### Decision file
 
-`/var/lib/maglev-pr-maintainer/state/decisions.json`
+`/var/lib/maglev-maintainer/state/decisions.json`
 
 Inference/user decisions only. Written through a tool, not by ad-hoc shell scripts. Durable decision text should use absolute dates, not relative phrases that become stale in later sessions; the decision tool rejects new `reason` or `observations` containing phrases such as `today`, `yesterday`, `recently`, or `this morning`.
 
@@ -79,7 +88,7 @@ Suggested decision fields:
 GitHub/state/context tools:
 
 - `maglev_pr_workspace_context`: return maintainer-root paths, current/target PR Bench context, artifact directories, companion repo root, naming conventions, and tool capability names. Config-aware skills should call this rather than hard-coding `/workspace` paths or repo-local output directories.
-- `maglev_pr_companion_repos`: resolve OBA companion repos for API/spec review skills. By default repos live under `/var/lib/maglev-pr-maintainer/companion-repos`; `$OBA_WORKSPACE` is an explicit override. Reference-only repos are cloned/fast-forwarded when safe; editable `maglev.wiki` is cloned on first use but not pulled automatically after that. Warnings/notes are returned as structured anomalies for the calling skill to report as caveats.
+- `maglev_pr_companion_repos`: resolve OBA companion repos for API/spec review skills. By default repos live under `/var/lib/maglev-maintainer/companion-repos`; `$OBA_WORKSPACE` is an explicit override. Reference-only repos are cloned/fast-forwarded when safe; editable `maglev.wiki` is cloned on first use but not pulled automatically after that. Warnings/notes are returned as structured anomalies for the calling skill to report as caveats.
 - `maglev_pr_snapshot_staleness`: check the local snapshot `fetchedAt` against `SNAPSHOT_STALE_AFTER_HOURS` from `extensions/constants.ts` (currently 4 hours). No live GitHub calls.
 - `maglev_pr_refresh_metadata`: fetch all open PR metadata and write the facts snapshot.
   - Current implementation is sequential: `gh pr list`, then one `gh pr view` per PR.
@@ -122,7 +131,7 @@ The core start planner currently treats these as warnings requiring explicit ack
 Draft status, merge state, failing checks, missing/stale triage decisions, pinning,
 and stack-parent gaps are informational only, not start blockers.
 
-Start plans use `gh repo clone` to create `/var/lib/maglev-pr-maintainer/checkouts/pr-N` when needed, then `gh pr checkout N --repo OneBusAway/maglev --branch pr-N` inside that checkout. GitHub CLI handles same-repo and fork PR checkout/push configuration inside the independent PR Bench checkout, avoiding repository-config coupling between PR Benches.
+Start plans use `gh repo clone` to create `/var/lib/maglev-maintainer/checkouts/pr-N` when needed, then `gh pr checkout N --repo OneBusAway/maglev --branch pr-N` inside that checkout. GitHub CLI handles same-repo and fork PR checkout/push configuration inside the independent PR Bench checkout, avoiding repository-config coupling between PR Benches.
 
 After applying start/completion, the package verifies checkout availability, branch existence, current branch, checkout HEAD, tmux session, and the tmux `pi` window. Verification failures are reported as partial or unexpected local state instead of silently claiming a clean start.
 
@@ -153,12 +162,12 @@ Commands:
 
 - `/maglev-prs` (implemented read-only queue report, optional PR-number filters; TUI-only custom entry, not model context)
 - `/maglev-pr-benches` (implemented read-only PR Bench report, optional PR-number filters; TUI-only custom entry, not model context)
-- `/maglev-pr-maintainer-status` (implemented status summary for root writability, snapshot, decisions, PR Benches, `gh`, and `tmux` availability)
+- `/maglev-maintainer-status` (implemented status summary for root writability, snapshot, decisions, PR Benches, `gh`, and `tmux` availability)
 - `/maglev-pr-bench-start` (implemented interactive start flow over the same planner)
 - `/maglev-pr-bench-reset` (implemented interactive reset flow over the same planner)
 - `/maglev-pr-bench-close` (implemented interactive close flow over the same planner)
 - `/maglev-pr-review-json` (implemented read-only scrollable draft viewer with discussion handoff)
-- `/maglev-pr-maintainer-info` (implemented resource/path summary)
+- `/maglev-maintainer-info` (implemented resource/path summary)
 
 ## Current TUI and planned queue UI
 

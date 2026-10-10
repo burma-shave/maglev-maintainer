@@ -23,7 +23,7 @@ async function fixture(t: TestContext) {
 
 function child(t: TestContext, root: string, file: string, operation: string, pr: number) {
 	const process = fork(new URL("../testdata/decision-process.ts", import.meta.url), [file, operation, String(pr), "pause"], {
-		env: { ...globalThis.process.env, FIXTURE_ROOT: root, MAGLEV_PR_MAINTAINER_ROOT: root },
+		env: { ...globalThis.process.env, FIXTURE_ROOT: root, MAGLEV_MAINTAINER_ROOT: root },
 		stdio: ["ignore", "pipe", "pipe", "ipc"],
 	});
 	let stderr = "";

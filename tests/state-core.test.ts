@@ -7,7 +7,7 @@ import { loadDecisionsFromFile, loadSnapshotFromFile, writeDecisionsToFile } fro
 import { makeDecision, makeDecisionsFile, makeSnapshotFile } from "../testdata/fixtures.ts";
 
 async function tempFiles() {
-	const dir = await mkdtemp(join(tmpdir(), "maglev-pr-maintainer-test-"));
+	const dir = await mkdtemp(join(tmpdir(), "maglev-maintainer-test-"));
 	return {
 		dir,
 		snapshot: join(dir, "snapshot.json"),

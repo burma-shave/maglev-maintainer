@@ -1,6 +1,6 @@
 ---
 name: maglev-bench
-compatibility: Requires the Maglev PR Maintainer extension tools.
+compatibility: Requires the Maglev Maintainer extension tools.
 description: Manage branch-based Maglev Benches for development, including opening existing branches, creating a branch from a base, inspecting/recovering/closing environments, and associating an existing Bench with a PR.
 ---
 

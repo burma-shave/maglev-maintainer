@@ -31,14 +31,14 @@ function standardRepoResponses(repoUrl: string, branch = "main", status = "") {
 test("resolveCompanionRepos uses maintainer companion repo dir and updates clean reference repos", async () => {
 	const git = fakeGit(standardRepoResponses("https://github.com/onebusaway/js-sdk.git"));
 	const result = await resolveCompanionRepos({ repos: ["js-sdk"] }, {
-		companionReposDir: "/var/lib/maglev-pr-maintainer/companion-repos",
+		companionReposDir: "/var/lib/maglev-maintainer/companion-repos",
 	}, {
-		exists: (path) => path === "/var/lib/maglev-pr-maintainer/companion-repos/js-sdk/.git",
+		exists: (path) => path === "/var/lib/maglev-maintainer/companion-repos/js-sdk/.git",
 		runGit: git.runGit,
 	});
 
 	assert.equal(result.ok, true);
-	assert.equal(result.repos[0]?.path, "/var/lib/maglev-pr-maintainer/companion-repos/js-sdk");
+	assert.equal(result.repos[0]?.path, "/var/lib/maglev-maintainer/companion-repos/js-sdk");
 	assert.equal(result.repos[0]?.source, "maintainer-root");
 	assert.equal(result.repos[0]?.updated, true);
 	assert.ok(git.calls.some((args) => args.join(" ").includes("pull --ff-only --quiet origin main")));
@@ -47,7 +47,7 @@ test("resolveCompanionRepos uses maintainer companion repo dir and updates clean
 test("resolveCompanionRepos honors OBA_WORKSPACE and canonicalizes oba-java alias", async () => {
 	const git = fakeGit(standardRepoResponses("git@github.com:onebusaway/onebusaway-application-modules.git"));
 	const result = await resolveCompanionRepos({ repos: ["oba-java"] }, {
-		companionReposDir: "/var/lib/maglev-pr-maintainer/companion-repos",
+		companionReposDir: "/var/lib/maglev-maintainer/companion-repos",
 		obaWorkspace: "/custom/oba",
 	}, {
 		exists: (path) => path === "/custom/oba/onebusaway-application-modules/.git",
@@ -64,7 +64,7 @@ test("resolveCompanionRepos clones missing repos into the maintainer companion r
 	const git = fakeGit(standardRepoResponses("https://github.com/onebusaway/maglev.wiki.git"));
 	const mkdirs: string[] = [];
 	const result = await resolveCompanionRepos({ repos: ["maglev.wiki"] }, {
-		companionReposDir: "/var/lib/maglev-pr-maintainer/companion-repos",
+		companionReposDir: "/var/lib/maglev-maintainer/companion-repos",
 	}, {
 		exists: () => false,
 		mkdir: async (path) => { mkdirs.push(path); },
@@ -73,14 +73,14 @@ test("resolveCompanionRepos clones missing repos into the maintainer companion r
 
 	assert.equal(result.ok, true);
 	assert.equal(result.repos[0]?.cloned, true);
-	assert.deepEqual(mkdirs, ["/var/lib/maglev-pr-maintainer/companion-repos"]);
-	assert.ok(git.calls.some((args) => args.join(" ") === "clone --depth 1 https://github.com/onebusaway/maglev.wiki.git /var/lib/maglev-pr-maintainer/companion-repos/maglev.wiki"));
+	assert.deepEqual(mkdirs, ["/var/lib/maglev-maintainer/companion-repos"]);
+	assert.ok(git.calls.some((args) => args.join(" ") === "clone --depth 1 https://github.com/onebusaway/maglev.wiki.git /var/lib/maglev-maintainer/companion-repos/maglev.wiki"));
 });
 
 test("resolveCompanionRepos reports dirty reference repos and does not pull them", async () => {
 	const git = fakeGit(standardRepoResponses("https://github.com/onebusaway/wayfinder.git", "main", " M file.ts\n"));
 	const result = await resolveCompanionRepos({ repos: ["wayfinder"] }, {
-		companionReposDir: "/var/lib/maglev-pr-maintainer/companion-repos",
+		companionReposDir: "/var/lib/maglev-maintainer/companion-repos",
 	}, {
 		exists: (path) => path.endsWith("/.git"),
 		runGit: git.runGit,

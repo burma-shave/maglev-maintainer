@@ -1,6 +1,6 @@
 ---
 name: maglev-checkout
-compatibility: Requires the Maglev PR Maintainer extension tools.
+compatibility: Requires the Maglev Maintainer extension tools.
 description: Resolve or clone the main OneBusAway/maglev source checkout independently of a PR Bench. Use when Maglev source is needed for investigation or development, or the user asks to clone/check out Maglev's default branch, branch, tag, or commit.
 ---
 

@@ -1,3 +1,4 @@
+import { DISPLAY_NAME, INFO_COMMAND, STATUS_COMMAND } from "./identity.ts";
 import { unlink } from "node:fs/promises";
 import { formatMaglevCheckout, resolveMaglevCheckout } from "./maglev-checkout.ts";
 import { registerApiRuntimeTools } from "./api-runtime-tools.ts";
@@ -11,7 +12,7 @@ import { deleteDecision, getDecision, listDecisions, saveDecision } from "./deci
 import { refreshMetadata } from "./github.ts";
 import { buildQueueModel, formatQueueReportLines, queueCounts } from "./queue-core.ts";
 import { BenchCloseParamsSchema, BenchInspectParamsSchema, BenchKickoffParamsSchema, BenchListParamsSchema, BenchResetParamsSchema, BenchStartParamsSchema, CodeReviewParamsSchema, CompanionReposParamsSchema, DecisionsParamsSchema, LoadMetadataParamsSchema, MaglevCheckoutParamsSchema, NeedsInferenceParamsSchema, RefreshMetadataParamsSchema, ReviewJsonClearParamsSchema, ReviewJsonListParamsSchema, ReviewJsonLoadParamsSchema, ReviewJsonParamsSchema, SnapshotStalenessParamsSchema, StateQueryParamsSchema, WorkspaceContextParamsSchema } from "./schemas.ts";
-import { BENCH_CHECKOUTS_DIR, BENCH_STATE_DIR, COMPANION_REPOS_DIR, DECISIONS_FILE, MAGLEV_PR_MAINTAINER_ROOT, REVIEW_JSON_DIR, SNAPSHOT_FILE, STATE_DIR } from "./paths.ts";
+import { BENCH_CHECKOUTS_DIR, BENCH_STATE_DIR, COMPANION_REPOS_DIR, DECISIONS_FILE, MAINTAINER_ROOT, REVIEW_JSON_DIR, SNAPSHOT_FILE, STATE_DIR } from "./paths.ts";
 import { loadDecisions, loadSnapshot, loadSnapshotOptional, writeDecisions } from "./state.ts";
 import { writeReviewJson } from "./review-json.ts";
 import { clearReviewJsonArtifact, formatReviewJsonArtifactLine, listReviewJsonArtifacts, loadReviewJsonArtifact, type LoadedReviewJsonArtifact } from "./review-json-store.ts";
@@ -106,7 +107,7 @@ function startReportLines(result: Awaited<ReturnType<typeof startBench>>): strin
 
 function formatMaintainerStatus(status: MaintainerStatus): string {
 	return [
-		"Maglev PR Maintainer status",
+		`${DISPLAY_NAME} status`,
 		status.snapshot.ok
 			? `Snapshot: ok • ${status.snapshot.prCount} PRs • fetched ${status.snapshot.fetchedAt} • ${status.snapshot.path}`
 			: `Snapshot: missing/error • ${status.snapshot.warning ?? "unknown error"} • ${status.snapshot.path}`,
@@ -181,7 +182,7 @@ async function showReviewJsonViewer(loaded: LoadedReviewJsonArtifact, ctx: Exten
 	}));
 }
 
-export default function maglevPrMaintainer(pi: ExtensionAPI) {
+export default function maglevMaintainer(pi: ExtensionAPI) {
 	registerApiRuntimeTools(pi);
 	registerGeneralBenchTools(pi);
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-queue-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["Maglev PR queue report unavailable."], theme));
@@ -190,24 +191,24 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-bench-reset-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["PR Bench reset report unavailable."], theme));
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-bench-close-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["PR Bench close report unavailable."], theme));
 
-	pi.registerCommand("maglev-pr-maintainer-info", {
-		description: "Show info for the in-development Maglev PR Maintainer package",
+	pi.registerCommand(INFO_COMMAND, {
+		description: `Show info for the in-development ${DISPLAY_NAME} package`,
 		handler: async (_args, ctx) => {
-			ctx.ui.notify(`Maglev PR Maintainer loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-prs, /maglev-pr-benches, /maglev-pr-bench-start, /maglev-pr-bench-reset, /maglev-pr-bench-close, /maglev-pr-review-json, /maglev-pr-maintainer-status. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_pr_workspace_context, maglev_pr_checkout, maglev_pr_api_start, maglev_pr_api_stop, maglev_pr_api_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_pr_bench_list, maglev_pr_bench_inspect, maglev_pr_bench_kickoff, maglev_pr_code_review, maglev_pr_bench_start, maglev_pr_bench_reset, maglev_pr_bench_close, maglev_pr_review_json, maglev_pr_review_json_clear, maglev_pr_review_json_list, maglev_pr_review_json_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
+			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-prs, /maglev-pr-benches, /maglev-pr-bench-start, /maglev-pr-bench-reset, /maglev-pr-bench-close, /maglev-pr-review-json, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_pr_workspace_context, maglev_pr_checkout, maglev_pr_api_start, maglev_pr_api_stop, maglev_pr_api_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_pr_bench_list, maglev_pr_bench_inspect, maglev_pr_bench_kickoff, maglev_pr_code_review, maglev_pr_bench_start, maglev_pr_bench_reset, maglev_pr_bench_close, maglev_pr_review_json, maglev_pr_review_json_clear, maglev_pr_review_json_list, maglev_pr_review_json_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
 		},
 	});
 
-	pi.registerCommand("maglev-pr-maintainer-status", {
-		description: "Show Maglev PR Maintainer snapshot, decisions, PR Bench, and dependency status",
+	pi.registerCommand(STATUS_COMMAND, {
+		description: `Show ${DISPLAY_NAME} snapshot, decisions, PR Bench, and dependency status`,
 		handler: async (_args, ctx) => {
 			const status = await getMaintainerStatus({
 				loadSnapshotOptional,
 				loadDecisions,
 				listBenches: () => collectAllBenchStates(),
-				checkRoot: () => commandSucceeds("test", ["-w", MAGLEV_PR_MAINTAINER_ROOT]),
+				checkRoot: () => commandSucceeds("test", ["-w", MAINTAINER_ROOT]),
 				checkGh: () => commandSucceeds("gh", ["auth", "status"]),
 				checkTmux: () => commandSucceeds("tmux", ["-V"]),
-				rootDir: MAGLEV_PR_MAINTAINER_ROOT,
+				rootDir: MAINTAINER_ROOT,
 				snapshotFile: SNAPSHOT_FILE,
 				decisionsFile: DECISIONS_FILE,
 				checkoutDir: BENCH_CHECKOUTS_DIR,
@@ -478,16 +479,16 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "maglev_pr_workspace_context",
 		label: "Maglev PR Workspace Context",
-		description: "Return Maglev PR Maintainer configuration, paths, PR Bench context, and tool capability names for config-aware skills.",
-		promptSnippet: "Load Maglev PR Maintainer workspace configuration and PR Bench context.",
+		description: `Return ${DISPLAY_NAME} configuration, paths, PR Bench context, and tool capability names for config-aware skills.`,
+		promptSnippet: `Load ${DISPLAY_NAME} workspace configuration and PR Bench context.`,
 		promptGuidelines: [
-			"Use maglev_pr_workspace_context before Maglev PR Maintainer-integrated skills need paths, artifact directories, or PR Bench context.",
+			`Use maglev_pr_workspace_context before ${DISPLAY_NAME}-integrated skills need paths, artifact directories, or PR Bench context.`,
 			"Prefer returned maintainer-root paths over hard-coded /workspace assumptions.",
 		],
 		parameters: WorkspaceContextParamsSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const context = buildWorkspaceContext({ pr: params.pr, benchId: params.benchId, benchDefinitions: await loadBenchDefinitions(), cwd: ctx?.cwd ?? process.cwd() }, {
-				maintainerRoot: MAGLEV_PR_MAINTAINER_ROOT,
+				maintainerRoot: MAINTAINER_ROOT,
 				stateDir: STATE_DIR,
 				snapshotFile: SNAPSHOT_FILE,
 				decisionsFile: DECISIONS_FILE,
@@ -523,10 +524,10 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "maglev_pr_companion_repos",
 		label: "Maglev PR Companion Repos",
-		description: "Resolve OBA companion repositories such as maglev.wiki, clients, and legacy Java under the Maglev PR Maintainer framework.",
+		description: `Resolve OBA companion repositories such as maglev.wiki, clients, and legacy Java under the ${DISPLAY_NAME} framework.`,
 		promptSnippet: "Resolve local OBA companion repos for Maglev API/spec review skills.",
 		promptGuidelines: [
-			"Use maglev_pr_companion_repos from Maglev PR Maintainer-integrated OBA API skills instead of shell resolver scripts.",
+			`Use maglev_pr_companion_repos from ${DISPLAY_NAME}-integrated OBA API skills instead of shell resolver scripts.`,
 			"Include returned warnings or notes as caveats in the final analysis.",
 			"Reference-only repos may be cloned or fast-forwarded; maglev.wiki is editable and is not pulled automatically after clone.",
 		],
@@ -648,7 +649,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 				snapshotWarning ? `Snapshot freshness unavailable: ${snapshotWarning}` : undefined,
 				...benches.map(formatBenchLine),
 			].filter(Boolean);
-			return toolResult(lines.join("\n"), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, benches, snapshotWarning });
+			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, benches, snapshotWarning });
 		},
 	});
 
@@ -666,7 +667,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 				snapshotWarning ? `Snapshot freshness unavailable: ${snapshotWarning}` : undefined,
 				...(bench?.warnings.map((warning) => `Warning: ${warning}`) ?? []),
 			].filter(Boolean);
-			return toolResult(lines.join("\n"), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, bench, snapshotWarning });
+			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, bench, snapshotWarning });
 		},
 	});
 
@@ -695,7 +696,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 		promptGuidelines: [
 			"Use maglev_pr_code_review for the initial PR Bench review instead of manually invoking Claude Code or the claude-code-pr-review skill.",
 			"Pass pr alone for remote review: no Bench lookup, clone, or checkout is required. Pass workingDirectory explicitly only for checkout-based review.",
-			"This tool captures Claude Code stdout/stderr and writes a full log under the Maglev PR Maintainer bench state directory; it does not submit GitHub reviews.",
+			`This tool captures Claude Code stdout/stderr and writes a full log under the ${DISPLAY_NAME} bench state directory; it does not submit GitHub reviews.`,
 		],
 		parameters: CodeReviewParamsSchema,
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -703,7 +704,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 				processCwd: () => ctx?.cwd ?? process.cwd(),
 				runText: (cmd, args, cwd) => runText(cmd, args, cwd, signal),
 			}, signal);
-			return toolResult(formatCodeReviewResult(result), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, benchStateDir: BENCH_STATE_DIR, ...result });
+			return toolResult(formatCodeReviewResult(result), { rootDir: MAINTAINER_ROOT, benchStateDir: BENCH_STATE_DIR, ...result });
 		},
 	});
 
@@ -721,7 +722,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 		parameters: BenchStartParamsSchema,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const result = await startBench(params.pr, { ...params, currentWorkingDirectory: ctx?.cwd ?? process.cwd() });
-			return toolResult(startReportLines(result).join("\n"), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
+			return toolResult(startReportLines(result).join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
 		},
 	});
 
@@ -743,7 +744,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 			else if (result.plan.apply && result.plan.status !== "ready") lines.push("Not applied because the plan is not ready.");
 			if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
 			if (result.mutationWarning) lines.push(result.mutationWarning);
-			return toolResult(lines.join("\n"), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
+			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
 		},
 	});
 
@@ -764,7 +765,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 			if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
 			else if (result.plan.apply && result.plan.status !== "ready") lines.push("Not applied because the plan is not ready.");
 			if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
-			return toolResult(lines.join("\n"), { rootDir: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
+			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
 		},
 	});
 
@@ -822,7 +823,7 @@ export default function maglevPrMaintainer(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "maglev_pr_review_json_list",
 		label: "Maglev PR Review JSON List",
-		description: "List current prospective PR review JSON drafts from the centralized Maglev PR Maintainer directory.",
+		description: `List current prospective PR review JSON drafts from the centralized ${DISPLAY_NAME} directory.`,
 		promptSnippet: "List current prospective PR review JSON drafts.",
 		promptGuidelines: ["Use maglev_pr_review_json_list to find current review JSON drafts before loading one for discussion."],
 		parameters: ReviewJsonListParamsSchema,

@@ -2,7 +2,7 @@
 
 ## Project and development scope
 
-**Maglev PR Maintainer** is the Pi package in this repository for maintaining
+**Maglev Maintainer** is the Pi package in this repository for maintaining
 `OneBusAway/maglev`. It unifies metadata triage, Bench lifecycle, review tools,
 API/spec skills, and durable maintainer state. Read existing code and workflow
 context before changing it. See `README.md` for the current resource/module
@@ -70,8 +70,13 @@ Keep deterministic domain functions separate from Pi registration/adapters.
 Tools, commands, TUI, and skills are clients of the same domain functions.
 Skills provide policy/inference, not alternate JSON mutation implementations.
 
-Canonical state is durable files under `/var/lib/maglev-pr-maintainer` by default,
-overridden by `MAGLEV_PR_MAINTAINER_ROOT`. Pi custom entries may hold display-only
+Canonical state is durable files under `/var/lib/maglev-maintainer` by default,
+overridden by `MAGLEV_MAINTAINER_ROOT` (legacy explicit `MAGLEV_PR_MAINTAINER_ROOT`
+is accepted when the new variable is unset). Existing state is never moved or
+implicitly discovered on rename; keep the configured root stable for active
+Benches/runtimes. Runtime identity is derived from `package.json` through
+`extensions/identity.ts`; workspace context exposes package-qualified identifiers.
+Pi custom entries may hold display-only
 reports, never canonical workflow state.
 
 ### GitHub snapshot: `state/github-snapshot.json`
@@ -117,7 +122,7 @@ Example:
 ### Triage
 
 Use compact needs-inference/decision outputs in the parent. Delegate one PR per
-fresh-context `maglev-pr-maintainer.pr-triage-analyst`; that child loads only its
+fresh-context `maglev-maintainer.pr-triage-analyst`; that child loads only its
 assigned PR using `maglev_pr_load_metadata` and returns a recommendation/basis.
 The parent owns ordering, decisions, persistence, and final acceptance. Intentional
 focused parent inspection of one selected PR remains supported. Do not use live
@@ -173,7 +178,7 @@ From this repository root:
 pi --no-extensions --no-skills \
   -e ./extensions/index.ts \
   --skill ./skills \
-  --name "Develop Maglev PR Maintainer"
+  --name "Develop Maglev Maintainer"
 ```
 
 Avoid loading old global resources alongside the package. Delegated triage also

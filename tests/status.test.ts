@@ -16,30 +16,30 @@ test("getMaintainerStatus returns structured ok status", async () => {
 		checkRoot: async () => true,
 		checkGh: async () => true,
 		checkTmux: async () => true,
-		rootDir: "/var/lib/maglev-pr-maintainer",
-		snapshotFile: "/var/lib/maglev-pr-maintainer/state/github-snapshot.json",
-		decisionsFile: "/var/lib/maglev-pr-maintainer/state/decisions.json",
-		checkoutDir: "/var/lib/maglev-pr-maintainer/checkouts",
+		rootDir: "/var/lib/maglev-maintainer",
+		snapshotFile: "/var/lib/maglev-maintainer/state/github-snapshot.json",
+		decisionsFile: "/var/lib/maglev-maintainer/state/decisions.json",
+		checkoutDir: "/var/lib/maglev-maintainer/checkouts",
 	});
 
 	assert.deepEqual(status, {
 		root: {
-			path: "/var/lib/maglev-pr-maintainer",
+			path: "/var/lib/maglev-maintainer",
 			ok: true,
 		},
 		snapshot: {
-			path: "/var/lib/maglev-pr-maintainer/state/github-snapshot.json",
+			path: "/var/lib/maglev-maintainer/state/github-snapshot.json",
 			ok: true,
 			fetchedAt: "2026-01-10T00:00:00Z",
 			prCount: 2,
 		},
 		decisions: {
-			path: "/var/lib/maglev-pr-maintainer/state/decisions.json",
+			path: "/var/lib/maglev-maintainer/state/decisions.json",
 			ok: true,
 			count: 1,
 		},
 		benches: {
-			checkoutDir: "/var/lib/maglev-pr-maintainer/checkouts",
+			checkoutDir: "/var/lib/maglev-maintainer/checkouts",
 			ok: true,
 			count: 1,
 			warning: undefined,
@@ -57,16 +57,16 @@ test("getMaintainerStatus reports missing snapshot, bench warning, and failed ch
 		checkRoot: async () => false,
 		checkGh: async () => false,
 		checkTmux: async () => false,
-		rootDir: "/var/lib/maglev-pr-maintainer",
-		snapshotFile: "/var/lib/maglev-pr-maintainer/state/github-snapshot.json",
-		decisionsFile: "/var/lib/maglev-pr-maintainer/state/decisions.json",
-		checkoutDir: "/var/lib/maglev-pr-maintainer/checkouts",
+		rootDir: "/var/lib/maglev-maintainer",
+		snapshotFile: "/var/lib/maglev-maintainer/state/github-snapshot.json",
+		decisionsFile: "/var/lib/maglev-maintainer/state/decisions.json",
+		checkoutDir: "/var/lib/maglev-maintainer/checkouts",
 	});
 
 	assert.equal(status.root.ok, false);
 	assert.equal(status.snapshot.ok, false);
 	assert.equal(status.snapshot.warning, "snapshot missing");
-	assert.equal(status.decisions.path, "/var/lib/maglev-pr-maintainer/state/decisions.json");
+	assert.equal(status.decisions.path, "/var/lib/maglev-maintainer/state/decisions.json");
 	assert.equal(status.benches.warning, "no snapshot freshness");
 	assert.equal(status.gh.ok, false);
 	assert.equal(status.tmux.ok, false);
@@ -80,19 +80,19 @@ test("getMaintainerStatus catches decision and bench errors", async () => {
 		checkRoot: async () => true,
 		checkGh: async () => true,
 		checkTmux: async () => true,
-		rootDir: "/var/lib/maglev-pr-maintainer",
-		snapshotFile: "/var/lib/maglev-pr-maintainer/state/github-snapshot.json",
-		decisionsFile: "/var/lib/maglev-pr-maintainer/state/decisions.json",
-		checkoutDir: "/var/lib/maglev-pr-maintainer/checkouts",
+		rootDir: "/var/lib/maglev-maintainer",
+		snapshotFile: "/var/lib/maglev-maintainer/state/github-snapshot.json",
+		decisionsFile: "/var/lib/maglev-maintainer/state/decisions.json",
+		checkoutDir: "/var/lib/maglev-maintainer/checkouts",
 	});
 
 	assert.deepEqual(status.decisions, {
-		path: "/var/lib/maglev-pr-maintainer/state/decisions.json",
+		path: "/var/lib/maglev-maintainer/state/decisions.json",
 		ok: false,
 		warning: "bad decisions json",
 	});
 	assert.deepEqual(status.benches, {
-		checkoutDir: "/var/lib/maglev-pr-maintainer/checkouts",
+		checkoutDir: "/var/lib/maglev-maintainer/checkouts",
 		ok: false,
 		warning: "tmux exploded",
 	});

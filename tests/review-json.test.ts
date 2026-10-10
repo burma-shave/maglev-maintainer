@@ -67,11 +67,11 @@ test("writeReviewJson fetches PR head, validates comments, and writes stable rev
 			wrotePath = path;
 			wroteValue = value;
 		},
-		reviewJsonDir: "/home/test/.pi/agent/maglev-pr-maintainer/review-json",
+		reviewJsonDir: "/home/test/.pi/agent/maglev-maintainer/review-json",
 	});
 
 	assert.equal(diffFetched, true);
-	assert.equal(wrotePath, "/home/test/.pi/agent/maglev-pr-maintainer/review-json/pr-1416.json");
+	assert.equal(wrotePath, "/home/test/.pi/agent/maglev-maintainer/review-json/pr-1416.json");
 	assert.deepEqual(wroteValue, {
 		owner: "OneBusAway",
 		repo: "maglev",
@@ -95,10 +95,10 @@ test("writeReviewJson omits comments and diff fetch for verdict-only reviews", a
 			return diff;
 		},
 		writeReviewJson: async (_path, value) => { wroteValue = value; },
-		reviewJsonDir: "/home/test/.pi/agent/maglev-pr-maintainer/review-json",
+		reviewJsonDir: "/home/test/.pi/agent/maglev-maintainer/review-json",
 	});
 
 	assert.equal(diffFetched, false);
 	assert.equal("comments" in wroteValue, false);
-	assert.equal(result.outputPath, "/home/test/.pi/agent/maglev-pr-maintainer/review-json/pr-5.json");
+	assert.equal(result.outputPath, "/home/test/.pi/agent/maglev-maintainer/review-json/pr-5.json");
 });

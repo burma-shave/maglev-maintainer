@@ -7,7 +7,7 @@ description: Sub-skill that checks whether a Maglev OBA API diff closes a stated
 
 Assess whether a change fully accomplishes its stated goal, including adequate test coverage for every sub-gap.
 
-Typically invoked by `oba-api-change-review`. Call directly only when you have a specific gap description and want isolated goal-closure analysis without client-impact or spec-maintenance workflow. This packaged version can run from a normal `maglev` checkout or PR Bench checkout; call `maglev_pr_workspace_context` first and resolve `maglev.wiki` through Maglev PR Maintainer tools.
+Typically invoked by `oba-api-change-review`. Call directly only when you have a specific gap description and want isolated goal-closure analysis without client-impact or spec-maintenance workflow. This packaged version can run from a normal `maglev` checkout or PR Bench checkout; call `maglev_pr_workspace_context` first and resolve `maglev.wiki` through Maglev Maintainer tools.
 
 ## Arguments
 
@@ -23,7 +23,7 @@ Typically invoked by `oba-api-change-review`. Call directly only when you have a
 
 ## Steps
 
-### 0. Load Maglev PR Maintainer context
+### 0. Load Maglev Maintainer context
 
 Call `maglev_pr_workspace_context`, then resolve `maglev.wiki` with `maglev_pr_companion_repos` before reading spec files. If the wiki repo has an error anomaly, stop and report it; otherwise include warning/note anomalies as caveats.
 

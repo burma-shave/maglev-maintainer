@@ -47,7 +47,7 @@ test("start refuses context for an existing Pi window, even for a partial checko
 	const pr = makeSnapshotPr({ number: 1416, headOid: "abc123" });
 	for (const piWindowExists of [true, undefined]) {
 		for (const branchExists of [true, false]) {
-			const existingBench = makeBenchState({ benchPath: "/var/lib/maglev-pr-maintainer/checkouts/pr-1416", piWindowExists, branchExists });
+			const existingBench = makeBenchState({ benchPath: "/var/lib/maglev-maintainer/checkouts/pr-1416", piWindowExists, branchExists });
 			const plan = planBenchStart({ pr, existingBench }, { context });
 			assert.equal(plan.status, "refused");
 			assert.ok(plan.refusals.some((finding) => finding.code === "context-requires-new-pi"));
@@ -60,8 +60,8 @@ test("new benches and recovered Pi windows receive caller context only after HEA
 	const pr = makeSnapshotPr({ number: 1416, headOid: "abc123" });
 	for (const existingBench of [
 		undefined,
-		makeBenchState({ tmuxExists: false, benchPath: "/var/lib/maglev-pr-maintainer/checkouts/pr-1416" }),
-		makeBenchState({ tmuxExists: true, piWindowExists: false, benchPath: "/var/lib/maglev-pr-maintainer/checkouts/pr-1416" }),
+		makeBenchState({ tmuxExists: false, benchPath: "/var/lib/maglev-maintainer/checkouts/pr-1416" }),
+		makeBenchState({ tmuxExists: true, piWindowExists: false, benchPath: "/var/lib/maglev-maintainer/checkouts/pr-1416" }),
 	]) {
 		const plan = planBenchStart({ pr, existingBench }, { apply: true, context });
 		const { deps, events, commands } = recordingDeps();
@@ -100,7 +100,7 @@ test("failure to persist context prevents launching Pi and reports partial work"
 test("context is never written for dry-run, refused, or reused execution plans", async () => {
 	const pr = makeSnapshotPr({ number: 1416, headOid: "abc123" });
 	const { deps, events } = recordingDeps();
-	const existingBench = makeBenchState({ benchPath: "/var/lib/maglev-pr-maintainer/checkouts/pr-1416" });
+	const existingBench = makeBenchState({ benchPath: "/var/lib/maglev-maintainer/checkouts/pr-1416" });
 	const plan = planBenchStart({ pr, existingBench }, { apply: true, context });
 	await assert.rejects(() => executeBenchStart({ pr, plan, existingBench }, deps), /not ready/);
 	// Independently guard the executor if a caller passes an inconsistent plan.

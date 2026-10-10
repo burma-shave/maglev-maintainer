@@ -1,7 +1,7 @@
 ---
 name: librarian
 description: Find, place, and organize Maglev maintainer documents. Use when creating or updating local plans, PR Bench notes, reports, or handoffs, or when asked where a document belongs or to move it out of a source checkout.
-compatibility: Requires the Maglev PR Maintainer workspace context tool.
+compatibility: Requires the Maglev Maintainer workspace context tool.
 ---
 
 # Librarian
@@ -16,7 +16,7 @@ Do not turn a request to find or discuss a document into an unsolicited move.
    PR number, or `benchId` for a supplied branch Bench ID (mutually exclusive).
    Otherwise use the returned current Bench context if it matches the subject.
 2. Use the returned maintainer root and artifact paths, not hard-coded workspace
-   assumptions. The default root is `/var/lib/maglev-pr-maintainer`, but it may
+   assumptions. The default root is `/var/lib/maglev-maintainer`, but it may
    be configured elsewhere.
 3. If a document is PR-specific and no PR can be established, ask for the PR
    number. Do not guess from an unrelated active Bench or start a Bench merely
@@ -42,9 +42,9 @@ The existing general release plan is:
 With the default configuration, working-document homes include:
 
 ```text
-/var/lib/maglev-pr-maintainer/plans/
-/var/lib/maglev-pr-maintainer/benches/pr-<PR>/reports/
-/var/lib/maglev-pr-maintainer/benches/branch-<slug>-<hash>/reports/
+/var/lib/maglev-maintainer/plans/
+/var/lib/maglev-maintainer/benches/pr-<PR>/reports/
+/var/lib/maglev-maintainer/benches/branch-<slug>-<hash>/reports/
 ```
 
 A general plan remains in `plans/` even if the session happens to run inside a

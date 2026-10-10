@@ -9,7 +9,7 @@ Use this skill to review a Maglev pull request for OBA API / legacy Java / wiki 
 
 Use this when you need the full PR/spec-maintenance process: confirm the true PR diff, gather PR comments, run/reuse `oba-api-change-review`, enumerate spec-deviation decisions with stable `SD-*` IDs, walk the user through those decisions, and write wiki/actionable-comment handoff files. For a smaller standalone behavior review, use `oba-api-change-review`.
 
-This packaged version is integrated with Maglev PR Maintainer. At the start, call `maglev_pr_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_pr_companion_repos` / packaged `oba-workspace`, not shell resolver scripts or hard-coded `/workspace` paths.
+This packaged version is integrated with Maglev Maintainer. At the start, call `maglev_pr_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_pr_companion_repos` / packaged `oba-workspace`, not shell resolver scripts or hard-coded `/workspace` paths.
 
 ## Wiki specs quick reference
 
@@ -42,7 +42,7 @@ Optional argument: PR number or branch description. Prefer the current branch PR
 
 ## Phase 0: Confirm PR and true diff
 
-0. Load Maglev PR Maintainer context. If an explicit PR number was provided, call `maglev_pr_workspace_context` with that PR. If not, call it with no arguments, infer the PR from the current branch/PR Bench if possible, then call it again with the confirmed PR once known. Record `artifacts.targetReportsDir`; this is the preferred output directory for this workflow.
+0. Load Maglev Maintainer context. If an explicit PR number was provided, call `maglev_pr_workspace_context` with that PR. If not, call it with no arguments, infer the PR from the current branch/PR Bench if possible, then call it again with the confirmed PR once known. Record `artifacts.targetReportsDir`; this is the preferred output directory for this workflow.
 
 1. Confirm the PR:
 

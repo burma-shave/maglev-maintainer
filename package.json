@@ -1,8 +1,8 @@
 {
-  "name": "maglev-pr-maintainer",
+  "name": "maglev-maintainer",
   "version": "0.0.0",
   "private": true,
-  "description": "Pi extension, tools, TUI, and skills for maintaining OneBusAway/maglev PRs.",
+  "description": "Pi extension, tools, TUI, and skills for maintaining OneBusAway/maglev branches and PRs.",
   "keywords": ["pi-package", "maglev", "pull-requests", "triage"],
   "type": "module",
   "scripts": {

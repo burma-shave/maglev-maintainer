@@ -7,7 +7,7 @@ description: Sub-skill that assesses impact of OBA API behavior changes on Wayfi
 
 Assess the impact of a production change (or proposed change) on the three OBA clients: Wayfinder + JS SDK, iOS, and Android.
 
-Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-review`. Call directly when you want isolated client analysis without goal/spec review. This packaged version can run from a normal `maglev` checkout or a PR Bench checkout. Call `maglev_pr_workspace_context` first so companion repos and caveats are resolved through the Maglev PR Maintainer framework.
+Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-review`. Call directly when you want isolated client analysis without goal/spec review. This packaged version can run from a normal `maglev` checkout or a PR Bench checkout. Call `maglev_pr_workspace_context` first so companion repos and caveats are resolved through the Maglev Maintainer framework.
 
 ## Arguments
 
@@ -30,7 +30,7 @@ This skill always needs all four client repos, so call `maglev_pr_workspace_cont
 
 ## Steps
 
-### 0. Load Maglev PR Maintainer context and client repos
+### 0. Load Maglev Maintainer context and client repos
 
 Call `maglev_pr_workspace_context`, then call `maglev_pr_companion_repos` with `repos: ["js-sdk", "wayfinder", "onebusaway-ios", "onebusaway-android"]`. Use the returned paths for all file reads and searches. If any repo has an error anomaly, stop and report it; otherwise include warning/note anomalies as caveats.
 

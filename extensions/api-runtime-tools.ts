@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { manageRuntime, runtimeIdentity } from "./api-runtime.ts";
-import { MAGLEV_PR_MAINTAINER_ROOT, BENCH_CHECKOUTS_DIR } from "./paths.ts";
+import { MAINTAINER_ROOT, BENCH_CHECKOUTS_DIR } from "./paths.ts";
 import { toolResult } from "./utils.ts";
 import { loadBenchDefinitions } from "./bench-registry.ts";
 
@@ -36,7 +36,7 @@ export function registerApiRuntimeTools(pi: ExtensionAPI) {
 			parameters,
 			async execute(_id, params, signal, _onUpdate, ctx) {
 				const prBenchId = params.pr ? (await loadBenchDefinitions()).find((bench) => bench.pr === params.pr)?.id : undefined;
-				const deps = { root: MAGLEV_PR_MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, cwd: ctx?.cwd ?? process.cwd(), prBenchId };
+				const deps = { root: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, cwd: ctx?.cwd ?? process.cwd(), prBenchId };
 				const identity = runtimeIdentity(params, deps);
 				const result = await withFileMutationQueue(identity.manifestPath, () => manageRuntime(action, params, deps, signal));
 				return toolResult(JSON.stringify(result, null, 2), result);

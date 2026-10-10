@@ -1,12 +1,12 @@
 ---
 name: maglev-pr-bench
-compatibility: Requires the Maglev PR Maintainer extension tools.
+compatibility: Requires the Maglev Maintainer extension tools.
 description: Manage local PR Benches for OneBusAway/maglev PR review. Use when the maintainer asks to open, inspect, continue, list, or close a PR Bench.
 ---
 
 # Maglev PR Bench
 
-A **PR Bench** is a specialization of a branch-based Bench with a PR association. Existing PR Benches use a plain checkout path such as `/var/lib/maglev-pr-maintainer/checkouts/pr-N`, `pr-N` branch, tmux session, and a tmux window named `pi` running Pi from the checkout root. New Pi windows start without an initial user prompt or automatic review. An agent can supply optional free-form `context` to Bench start as background for the new Pi session. Review kickoff is a separate, explicitly requested operation. A branch Bench can acquire a PR association through `maglev_bench_associate_pr` without changing its branch, ID, checkout/session, or artifact paths; PR tools then resolve that same Bench. Use the `maglev-bench` skill for branch development and association.
+A **PR Bench** is a specialization of a branch-based Bench with a PR association. Existing PR Benches use a plain checkout path such as `/var/lib/maglev-maintainer/checkouts/pr-N`, `pr-N` branch, tmux session, and a tmux window named `pi` running Pi from the checkout root. New Pi windows start without an initial user prompt or automatic review. An agent can supply optional free-form `context` to Bench start as background for the new Pi session. Review kickoff is a separate, explicitly requested operation. A branch Bench can acquire a PR association through `maglev_bench_associate_pr` without changing its branch, ID, checkout/session, or artifact paths; PR tools then resolve that same Bench. Use the `maglev-bench` skill for branch development and association.
 
 Use PR Bench tools:
 

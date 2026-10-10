@@ -9,7 +9,7 @@ Focused entry point for reviewing a Maglev OBA API behavior change. Determines w
 
 Use this for a focused behavior review of a PR, branch, working tree, or proposed change. For the full PR/spec-maintenance workflow that gathers PR comments, assigns `SD-*` IDs, asks for decisions, and writes wiki/comment handoffs, use `oba-api-pr-spec-review` instead.
 
-This Maglev PR Maintainer packaged skill is meant to run from a normal `maglev` checkout or from a PR Bench checkout. At the start, call `maglev_pr_workspace_context`; if the source is a PR number, pass that PR number. Use the returned current/target PR Bench paths, artifact directories, and companion repo resolver capability instead of assuming `/workspace` or repo-local output paths.
+This Maglev Maintainer packaged skill is meant to run from a normal `maglev` checkout or from a PR Bench checkout. At the start, call `maglev_pr_workspace_context`; if the source is a PR number, pass that PR number. Use the returned current/target PR Bench paths, artifact directories, and companion repo resolver capability instead of assuming `/workspace` or repo-local output paths.
 
 `oba-api-client-impact` needs source from `wayfinder`, `js-sdk`, `onebusaway-ios`, and `onebusaway-android`; Java-behavior checks may need `onebusaway-application-modules` / `oba-java`; `oba-api-spec-check` and `oba-api-goal-check` need `maglev.wiki`. Resolve those through the packaged `oba-workspace` skill / `maglev_pr_companion_repos` tool and include any caveats in the final report.
 
@@ -36,7 +36,7 @@ Strip a trailing `--output` or `--output <path>` token from the argument before 
 
 ## Steps
 
-### 0. Load Maglev PR Maintainer context
+### 0. Load Maglev Maintainer context
 
 Call `maglev_pr_workspace_context` before inspecting paths or choosing output locations. If the parsed source is a PR number, pass it as `pr`; otherwise call with no arguments. Carry the returned context through the review, especially `benches.*`, `artifacts.targetReportsDir`, and `companionRepos.resolverTool`.
 

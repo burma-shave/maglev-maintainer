@@ -1,5 +1,6 @@
 import { isAbsolute, join, relative, sep } from "node:path";
 import { REPO } from "./constants.ts";
+import { DISPLAY_NAME, PACKAGE_NAME, ROOT_ENV_VAR, INFO_COMMAND, STATUS_COMMAND, TRIAGE_AGENT } from "./identity.ts";
 import { maglevCheckoutPath } from "./maglev-checkout.ts";
 import { validBenchId, type BenchDefinition } from "./bench-registry.ts";
 
@@ -52,6 +53,14 @@ export function buildWorkspaceContext(input: WorkspaceContextInput, paths: Works
 
 	return {
 		schemaVersion: 1,
+		package: {
+			name: PACKAGE_NAME,
+			displayName: DISPLAY_NAME,
+			rootEnvVar: ROOT_ENV_VAR,
+			infoCommand: INFO_COMMAND,
+			statusCommand: STATUS_COMMAND,
+			triageAgent: TRIAGE_AGENT,
+		},
 		repo: REPO,
 		cwd,
 		maintainerRoot: paths.maintainerRoot,
@@ -128,7 +137,7 @@ export function buildWorkspaceContext(input: WorkspaceContextInput, paths: Works
 
 export function formatWorkspaceContext(context: ReturnType<typeof buildWorkspaceContext>): string {
 	const lines = [
-		"Maglev PR Maintainer workspace context",
+		`${DISPLAY_NAME} workspace context`,
 		`Repo: ${context.repo}`,
 		`Maintainer root: ${context.maintainerRoot}`,
 		context.cwd ? `Current directory: ${context.cwd}` : undefined,

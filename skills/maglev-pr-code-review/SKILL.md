@@ -1,6 +1,6 @@
 ---
 name: maglev-pr-code-review
-compatibility: Requires the Maglev PR Maintainer extension tools and an authenticated Claude Code CLI with /code-review available.
+compatibility: Requires the Maglev Maintainer extension tools and an authenticated Claude Code CLI with /code-review available.
 description: Run Claude Code /code-review for a Maglev PR by number without requiring a Bench or checkout. An explicit checkout is optional. Automatically hands settled findings to maglev-pr-review-draft; never submits GitHub reviews.
 ---
 

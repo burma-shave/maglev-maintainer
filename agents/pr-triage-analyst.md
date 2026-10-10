@@ -1,6 +1,6 @@
 ---
 name: pr-triage-analyst
-package: maglev-pr-maintainer
+package: maglev-maintainer
 description: Analyze one Maglev PR's snapshot discussion, reviews, commits, checks, and blockers; return a compact triage recommendation without changing state.
 advertise: true
 tools: read, maglev_pr_workspace_context, maglev_pr_snapshot_staleness, maglev_pr_load_metadata, maglev_pr_state_query

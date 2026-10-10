@@ -1,6 +1,6 @@
 # OBA API review skills
 
-Maglev PR Maintainer-packaged skills for reviewing changes to the Maglev OBA REST API:
+Maglev Maintainer-packaged skills for reviewing changes to the Maglev OBA REST API:
 
 | Skill | Purpose |
 |---|---|
@@ -13,14 +13,14 @@ Maglev PR Maintainer-packaged skills for reviewing changes to the Maglev OBA RES
 
 Usually you only need `oba-api-change-review` for focused review or `oba-api-pr-spec-review` for full spec-maintenance decisions.
 
-## Maglev PR Maintainer integration
+## Maglev Maintainer integration
 
 These package-local skills should call `maglev_pr_workspace_context` at the start of a workflow. If a PR number is known, pass it as `pr`. Use the returned PR Bench and artifact paths instead of assuming a fixed `/workspace` layout or repo-local `tmp` output directory.
 
 Generated reports and handoffs should prefer `artifacts.targetReportsDir`, normally:
 
 ```text
-/var/lib/maglev-pr-maintainer/benches/pr-<PR>/reports
+/var/lib/maglev-maintainer/benches/pr-<PR>/reports
 ```
 
 For an unassociated branch Bench, pass `benchId` or use detected current Bench
@@ -39,7 +39,7 @@ For a separately requested publication script, use `privileged-handoff-script`.
 Client/spec/Java checks resolve companion repos through `maglev_pr_companion_repos` or the packaged `oba-workspace` skill. By default checkouts live under:
 
 ```text
-/var/lib/maglev-pr-maintainer/companion-repos
+/var/lib/maglev-maintainer/companion-repos
 ```
 
 Set `$OBA_WORKSPACE` only when you intentionally want to use another directory.

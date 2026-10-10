@@ -12,7 +12,7 @@ test("buildStateQuery joins full snapshot, decision, needs-inference, and PR Ben
 		makeDecision(7, { bucket: "watch", reason: "old", decidedAt: "2026-01-02T00:00:00Z", basis: { headOid: "old" } }),
 		makeDecision(8, { bucket: "review", reason: "ready", decidedAt: "2026-01-02T00:00:00Z" }),
 	];
-	const benches = [makeBenchState({ pr: 8, benchPath: "/var/lib/maglev-pr-maintainer/checkouts/pr-8", freshness: "fresh" })];
+	const benches = [makeBenchState({ pr: 8, benchPath: "/var/lib/maglev-maintainer/checkouts/pr-8", freshness: "fresh" })];
 
 	const result = buildStateQuery({ snapshot, decisions, benches, prs: [8, 7, 8, 99] });
 
@@ -20,7 +20,7 @@ test("buildStateQuery joins full snapshot, decision, needs-inference, and PR Ben
 	assert.deepEqual(result.rows.map((row) => row.pr), [8, 7, 99]);
 	assert.equal(result.rows[0].snapshot?.title, "fresh");
 	assert.equal(result.rows[0].decision?.bucket, "review");
-	assert.equal(result.rows[0].bench?.benchPath, "/var/lib/maglev-pr-maintainer/checkouts/pr-8");
+	assert.equal(result.rows[0].bench?.benchPath, "/var/lib/maglev-maintainer/checkouts/pr-8");
 	assert.equal(result.rows[1].needsInference?.reason, "saved decision is stale after commit/human activity");
 	assert.equal(result.rows[2].snapshot, null);
 	assert.deepEqual(result.missingFromSnapshot, [99]);

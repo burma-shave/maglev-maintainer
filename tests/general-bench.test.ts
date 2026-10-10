@@ -16,7 +16,7 @@ import { makeSnapshotFile, makeSnapshotPr } from "../testdata/fixtures.ts";
 const exec = promisify(execFile);
 const target = branchBenchDefinition("feature/branch-benches");
 function bench(overrides: Partial<GeneralBenchState> = {}): GeneralBenchState {
-	return { ...target, sessionName: target.id, benchPath: `/var/lib/maglev-pr-maintainer/checkouts/${target.id}`, currentBranch: target.branchName,
+	return { ...target, sessionName: target.id, benchPath: `/var/lib/maglev-maintainer/checkouts/${target.id}`, currentBranch: target.branchName,
 		branchExists: true, checkoutExists: true, checkoutKind: "plain", worktreeRegistered: false, tmuxExists: false, piWindowExists: false,
 		dirty: false, dirtyStatus: "clean", commitSafety: "safe", freshness: "unknown", warnings: [], ...overrides };
 }
@@ -275,7 +275,7 @@ test("sandbox discovery/association uses the same Bench and PR compatibility vie
 		const generic=await b.startBranchBench(${JSON.stringify(sandboxTarget.branchName)}); assert.equal(generic.plan.pr,45);
 		const close=await b.closeGeneralBench(id,{closeTmux:false}); assert.equal(close.applied,false); assert.equal(close.plan.status,'needs-override');
 		console.log('ok');`;
-	const result = await exec(process.execPath, ["--input-type=module", "-e", source], { env: { ...process.env, MAGLEV_PR_MAINTAINER_ROOT: root } });
+	const result = await exec(process.execPath, ["--input-type=module", "-e", source], { env: { ...process.env, MAGLEV_MAINTAINER_ROOT: root } });
 	assert.equal(result.stdout.trim(), "ok");
 	assert.equal(JSON.parse(await readFile(join(root, "benches", sandboxTarget.id, "bench.json"), "utf8")).pr, 45);
 });
@@ -311,6 +311,6 @@ test("shared executor uses real Git for default/topic branches and new-branch cr
 			else assert.equal((await exec('git',['rev-parse','--abbrev-ref','@{upstream}'],{cwd:plan.benchPath})).stdout.trim(),'origin/'+branch);
 		}
 		assert.equal(launches,3); console.log('ok');`;
-	const result = await exec(process.execPath, ["--input-type=module", "-e", script], { env: { ...process.env, MAGLEV_PR_MAINTAINER_ROOT: root } });
+	const result = await exec(process.execPath, ["--input-type=module", "-e", script], { env: { ...process.env, MAGLEV_MAINTAINER_ROOT: root } });
 	assert.equal(result.stdout.trim(), "ok");
 });

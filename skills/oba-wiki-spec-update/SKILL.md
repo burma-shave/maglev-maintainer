@@ -7,7 +7,7 @@ description: Applies approved maglev.wiki OBA API spec updates from a handoff, i
 
 Use this skill to update the `maglev.wiki` companion repo for OBA API specification documentation after the user has approved spec-maintenance decisions. It is intentionally generic: it can document accepted Maglev deviations, correct endpoint spec prose, document legacy Java defects, and update federation/multi-agency notes.
 
-Usually run from a handoff produced by `oba-api-pr-spec-review`. Do not use this as an exploratory spec checker; use `oba-api-spec-check` for read-only checking. This skill edits `maglev.wiki`, asks before committing locally, and never pushes. This packaged version resolves repos through Maglev PR Maintainer tools, so call `maglev_pr_workspace_context` first.
+Usually run from a handoff produced by `oba-api-pr-spec-review`. Do not use this as an exploratory spec checker; use `oba-api-spec-check` for read-only checking. This skill edits `maglev.wiki`, asks before committing locally, and never pushes. This packaged version resolves repos through Maglev Maintainer tools, so call `maglev_pr_workspace_context` first.
 
 ## Operating rules
 

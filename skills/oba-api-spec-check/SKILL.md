@@ -7,7 +7,7 @@ description: Sub-skill that checks a Maglev OBA API change against the relevant 
 
 Assess whether a change is consistent with the relevant `maglev.wiki` spec, and verify that any deviation from legacy behaviour is recorded in the spec's Implementation Decisions section.
 
-Typically invoked by `oba-api-change-review`. Call directly when you want to isolate spec alignment from goal-closure, client impact, or PR decision workflow. This skill reports needed wiki updates but does not edit the wiki; use `oba-wiki-spec-update` for approved wiki changes. This packaged version can run from a normal `maglev` checkout or PR Bench checkout; call `maglev_pr_workspace_context` first and resolve wiki/Java repos through Maglev PR Maintainer tools.
+Typically invoked by `oba-api-change-review`. Call directly when you want to isolate spec alignment from goal-closure, client impact, or PR decision workflow. This skill reports needed wiki updates but does not edit the wiki; use `oba-wiki-spec-update` for approved wiki changes. This packaged version can run from a normal `maglev` checkout or PR Bench checkout; call `maglev_pr_workspace_context` first and resolve wiki/Java repos through Maglev Maintainer tools.
 
 **This skill identifies where a spec is inconsistent, incomplete, or needs a new Implementation Decisions entry — it does not edit `maglev.wiki` itself.** A spec change affects every client and every future review, so route actual wiki edits through the agreed spec-maintenance process (typically `oba-api-pr-spec-review` → `oba-wiki-spec-update`) rather than editing the wiki unilaterally.
 
@@ -25,7 +25,7 @@ Typically invoked by `oba-api-change-review`. Call directly when you want to iso
 
 ## Steps
 
-### 0. Load Maglev PR Maintainer context
+### 0. Load Maglev Maintainer context
 
 Call `maglev_pr_workspace_context`, then resolve `maglev.wiki` with `maglev_pr_companion_repos` before reading spec files. If Java behavior is needed later, resolve `oba-java` with the same tool. If any resolved repo has an error anomaly, stop and report it; otherwise include warning/note anomalies as caveats.
 
