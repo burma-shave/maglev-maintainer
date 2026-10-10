@@ -1,18 +1,23 @@
 ---
-name: librarian
-description: Find, place, and organize Maglev maintainer documents. Use when creating or updating local plans, PR Bench notes, reports, or handoffs, or when asked where a document belongs or to move it out of a source checkout.
+name: maglev-artifacts
+description: Find, place, and organize Maglev maintainer artifacts, including plans, Bench notes, reports, handoffs, and generated scripts. Use when creating, updating, locating, or moving working artifacts, or deciding which dedicated tool owns an artifact. Does not mutate tool-owned canonical state.
 compatibility: Requires the Maglev Maintainer workspace context tool.
 ---
 
-# Librarian
+# Maglev Artifacts
 
-Keep maintainer working documents outside source checkouts unless the user
-explicitly intends to commit them. Choose a location before writing a document.
-Do not turn a request to find or discuss a document into an unsolicited move.
+Keep maintainer working artifacts outside source checkouts unless the user
+explicitly intends to commit them. Choose a location before writing an artifact.
+Do not turn a request to find or discuss an artifact into an unsolicited move.
+
+This skill owns placement and organization guidance, not every artifact's
+creation or mutation. Use dedicated skills/tools for generated scripts, review
+drafts, runtime files, and canonical state. Never relocate or overwrite tool-owned
+artifacts merely to make their layout more consistent.
 
 ## Resolve the workspace
 
-1. Call `maglev_pr_workspace_context` first. Pass `pr` when the user supplies a
+1. Call `maglev_workspace_context` first. Pass `pr` when the user supplies a
    PR number, or `benchId` for a supplied branch Bench ID (mutually exclusive).
    Otherwise use the returned current Bench context if it matches the subject.
 2. Use the returned maintainer root and artifact paths, not hard-coded workspace
@@ -24,14 +29,15 @@ Do not turn a request to find or discuss a document into an unsolicited move.
 
 ## Placement rules
 
-| Document | Location |
+| Artifact | Location |
 | --- | --- |
 | General implementation/release plans, cross-PR design notes, long-lived maintainer planning | `<maintainerRoot>/plans/<topic>.md` |
 | PR- or branch-Bench-specific plans, review notes, investigation reports, test summaries, and handoffs | Returned `artifacts.targetReportsDir`; normally `<maintainerRoot>/benches/<bench-id>/reports/<topic>.md`. PR association preserves an existing branch Bench's ID/path. |
 | Reports or handoffs without an applicable Bench | `<maintainerRoot>/plans/<topic>.md`; never a default checkout-local `tmp/` fallback |
 | Documentation explicitly intended for a repository commit | Follow that repository's documentation instructions and existing layout |
 | Canonical wiki specifications or approved wiki updates | Follow the relevant wiki skill and repository instructions |
-| Prospective GitHub review JSON and triage state | Use their dedicated maintainer tools, not arbitrary Markdown/JSON files |
+| Generated privileged handoff scripts | Returned `artifacts.generatedScriptsDir`; follow `../privileged-handoff-script/SKILL.md` for generation and validation, never execute merely because a script was generated |
+| Prospective GitHub review JSON, triage state, Bench manifests, and runtime files/logs | Use their dedicated maintainer tools; do not manually mutate or move tool-owned artifacts |
 
 The existing general release plan is:
 
@@ -57,7 +63,7 @@ Respect an explicitly requested destination, subject to repository instructions.
 Explain any conflict before proceeding. Local plans are not automatically
 canonical specs or wiki updates just because they contain design decisions.
 
-## Find, write, and maintain documents
+## Find, write, and maintain working artifacts
 
 - Search the relevant plans or per-Bench reports directory before creating a new
   document. Read and update an existing matching document rather than making
@@ -77,6 +83,6 @@ canonical specs or wiki updates just because they contain design decisions.
 - Bench lifecycle cleanup may remove per-Bench artifacts. Keep long-lived,
   cross-PR documents in `plans/`; ask before archiving or moving Bench reports
   when closing a Bench. Do not initiate Bench cleanup from this skill.
-- Finish with the exact document path and a brief summary of what changed.
+- Finish with the exact artifact path and a brief summary of what changed.
   Carry forward relevant workspace/path warnings; do not claim a document is
   committed, published, or archived merely because it was written locally.

@@ -1,4 +1,5 @@
 import { DISPLAY_NAME, INFO_COMMAND, STATUS_COMMAND } from "./identity.ts";
+import { MAGLEV_TOOL_NAMESPACE } from "./tool-namespace.ts";
 import { unlink } from "node:fs/promises";
 import { formatMaglevCheckout, resolveMaglevCheckout } from "./maglev-checkout.ts";
 import { registerApiRuntimeTools } from "./api-runtime-tools.ts";
@@ -126,7 +127,7 @@ function formatMaintainerStatus(status: MaintainerStatus): string {
 function parseReviewJsonCommandArgs(args: string): { pr?: number; path?: string; error?: string } {
 	const tokens = args.trim().split(/\s+/).filter(Boolean);
 	if (tokens.length === 0) return {};
-	if (tokens.length > 1) return { error: "Usage: /maglev-pr-review-json [PR number | path]" };
+	if (tokens.length > 1) return { error: "Usage: /maglev-pr-review-draft [PR number | path]" };
 	const token = tokens[0]!;
 	const normalized = token.replace(/^#/, "");
 	if (/^\d+$/.test(normalized)) return { pr: Number(normalized) };
@@ -194,7 +195,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	pi.registerCommand(INFO_COMMAND, {
 		description: `Show info for the in-development ${DISPLAY_NAME} package`,
 		handler: async (_args, ctx) => {
-			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-prs, /maglev-pr-benches, /maglev-pr-bench-start, /maglev-pr-bench-reset, /maglev-pr-bench-close, /maglev-pr-review-json, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_pr_workspace_context, maglev_pr_checkout, maglev_pr_api_start, maglev_pr_api_stop, maglev_pr_api_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_pr_bench_list, maglev_pr_bench_inspect, maglev_pr_bench_kickoff, maglev_pr_code_review, maglev_pr_bench_start, maglev_pr_bench_reset, maglev_pr_bench_close, maglev_pr_review_json, maglev_pr_review_json_clear, maglev_pr_review_json_list, maglev_pr_review_json_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
+			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-prs, /maglev-pr-benches, /maglev-pr-bench-start, /maglev-pr-bench-reset, /maglev-pr-bench-close, /maglev-pr-review-draft, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_workspace_context, maglev_checkout, maglev_companion_repos_resolve, maglev_api_runtime_start, maglev_api_runtime_stop, maglev_api_runtime_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_pr_bench_list, maglev_pr_bench_inspect, maglev_pr_review_instructions_load, maglev_pr_code_review, maglev_pr_bench_start, maglev_pr_bench_reset, maglev_pr_bench_close, maglev_pr_review_draft_save, maglev_pr_review_draft_clear, maglev_pr_review_draft_list, maglev_pr_review_draft_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
 		},
 	});
 
@@ -218,11 +219,11 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("maglev-pr-review-json", {
-		description: "Open a scrollable viewer for a current prospective PR review JSON draft. Usage: /maglev-pr-review-json [PR number | path]",
+	pi.registerCommand("maglev-pr-review-draft", {
+		description: "Open a scrollable viewer for a current prospective PR review JSON draft. Usage: /maglev-pr-review-draft [PR number | path]",
 		handler: async (args, ctx) => {
 			if (ctx.mode !== "tui") {
-				ctx.ui.notify("/maglev-pr-review-json requires interactive TUI mode.", "error");
+				ctx.ui.notify("/maglev-pr-review-draft requires interactive TUI mode.", "error");
 				return;
 			}
 			const parsed = parseReviewJsonCommandArgs(args ?? "");
@@ -477,12 +478,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_workspace_context",
-		label: "Maglev PR Workspace Context",
-		description: `Return ${DISPLAY_NAME} configuration, paths, PR Bench context, and tool capability names for config-aware skills.`,
-		promptSnippet: `Load ${DISPLAY_NAME} workspace configuration and PR Bench context.`,
+		name: "maglev_workspace_context",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev Workspace Context",
+		description: `Return ${DISPLAY_NAME} configuration, paths, branch or PR Bench context, and tool capability names for config-aware skills.`,
+		promptSnippet: `Load ${DISPLAY_NAME} workspace configuration and Bench context.`,
 		promptGuidelines: [
-			`Use maglev_pr_workspace_context before ${DISPLAY_NAME}-integrated skills need paths, artifact directories, or PR Bench context.`,
+			`Use maglev_workspace_context before ${DISPLAY_NAME}-integrated skills need paths, artifact directories, or Bench context.`,
 			"Prefer returned maintainer-root paths over hard-coded /workspace assumptions.",
 		],
 		parameters: WorkspaceContextParamsSchema,
@@ -503,12 +505,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_checkout",
+		name: "maglev_checkout",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev Checkout",
 		description: "Resolve or clone OneBusAway/maglev independently of a PR Bench. Dry-run by default; existing checkouts are inspected without fetching, switching, or resetting.",
 		promptSnippet: "Resolve or clone the main Maglev source checkout safely.",
 		promptGuidelines: [
-			"Use maglev_pr_workspace_context first, then maglev_pr_checkout when Maglev source is needed outside a PR Bench.",
+			"Use maglev_workspace_context first, then maglev_checkout when Maglev source is needed outside a PR Bench.",
 			"Set apply true only when the user explicitly requests a clone/checkout. Existing local work is always preserved; report returned warnings.",
 		],
 		parameters: MaglevCheckoutParamsSchema,
@@ -522,12 +525,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_companion_repos",
-		label: "Maglev PR Companion Repos",
+		name: "maglev_companion_repos_resolve",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev Companion Repos Resolve",
 		description: `Resolve OBA companion repositories such as maglev.wiki, clients, and legacy Java under the ${DISPLAY_NAME} framework.`,
 		promptSnippet: "Resolve local OBA companion repos for Maglev API/spec review skills.",
 		promptGuidelines: [
-			`Use maglev_pr_companion_repos from ${DISPLAY_NAME}-integrated OBA API skills instead of shell resolver scripts.`,
+			`Use maglev_companion_repos_resolve from ${DISPLAY_NAME}-integrated OBA API skills instead of shell resolver scripts.`,
 			"Include returned warnings or notes as caveats in the final analysis.",
 			"Reference-only repos may be cloned or fast-forwarded; maglev.wiki is editable and is not pulled automatically after clone.",
 		],
@@ -543,6 +547,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_snapshot_staleness",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Snapshot Staleness",
 		description: "Check whether the local Maglev PR GitHub snapshot is missing or older than the package staleness threshold. No live GitHub calls.",
 		promptSnippet: "Check whether the local Maglev PR GitHub snapshot is missing or older than 4 hours.",
@@ -556,6 +561,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_refresh_metadata",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Refresh Metadata",
 		description: "Fetch all open OneBusAway/maglev PR metadata from GitHub and write the facts-only snapshot file.",
 		promptSnippet: "Refresh the facts-only GitHub PR snapshot for OneBusAway/maglev.",
@@ -580,6 +586,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_load_metadata",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Load Metadata",
 		description: "Read full selected PR facts, including discussions, reviews, commits, and snapshot identity, into model context from the local Maglev PR GitHub snapshot. No live GitHub calls.",
 		promptSnippet: "Load PR facts from the local Maglev PR snapshot by number, all PRs, or needs-inference selection.",
@@ -593,6 +600,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_state_query",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR State Query",
 		description: "Dump selected PR snapshot facts, durable decision, stale-inference status, and local PR Bench state as JSON text. No live GitHub calls.",
 		promptSnippet: "Query joined Maglev PR state from local snapshot, decisions, and PR Benches without shell/Python/JQ scripts.",
@@ -624,6 +632,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_needs_inference",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Needs Inference",
 		description: "Return PRs with no saved decision or stale decisions based only on local snapshot facts and decisions.",
 		promptSnippet: "Find Maglev PRs needing LLM triage inference from durable local state.",
@@ -637,6 +646,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_bench_list",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Bench List",
 		description: "List active/local Maglev PR Benches without mutating state.",
 		promptSnippet: "List local PR Benches for OneBusAway/maglev.",
@@ -655,6 +665,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_bench_inspect",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Bench Inspect",
 		description: "Inspect one local Maglev PR Bench without mutating state.",
 		promptSnippet: "Inspect one local PR Bench for OneBusAway/maglev.",
@@ -672,12 +683,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_bench_kickoff",
-		label: "Maglev PR Bench Kickoff",
+		name: "maglev_pr_review_instructions_load",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev PR Review Instructions Load",
 		description: "Load the on-demand read-only PR review kickoff instructions and snapshot context for the calling agent. Does not start a bench, write a prompt file, or send input to another Pi session.",
 		promptSnippet: "Load PR Bench review kickoff instructions on demand.",
 		promptGuidelines: [
-			"Use maglev_pr_bench_kickoff only when the maintainer explicitly requests a review kickoff, never automatically after starting or recovering a bench.",
+			"Use maglev_pr_review_instructions_load only when the maintainer explicitly requests a review kickoff, never automatically after starting or recovering a bench.",
 			"The returned instructions apply to the calling agent; use the specified PR Bench checkout for review. No review is executed by this tool itself.",
 		],
 		parameters: BenchKickoffParamsSchema,
@@ -690,6 +702,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_code_review",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Code Review",
 		description: "Run Claude Code /code-review for a Maglev PR by number, without requiring a Bench or checkout. Optionally use an explicit checkout.",
 		promptSnippet: "Run a prospective Claude Code review by PR number or from an explicit checkout.",
@@ -710,6 +723,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_bench_start",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Bench Start",
 		description: "Plan or execute starting or completing a local Maglev PR Bench with safety checks. Uses a plain checkout and gh pr checkout.",
 		promptSnippet: "Plan starting or reusing a local PR Bench for OneBusAway/maglev.",
@@ -728,6 +742,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_bench_reset",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Bench Reset",
 		description: "Plan or execute resetting an existing local Maglev PR Bench checkout to the snapshot PR head after a force-push.",
 		promptSnippet: "Reset an existing local PR Bench checkout for OneBusAway/maglev to the current snapshot PR head.",
@@ -750,6 +765,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_bench_close",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Bench Close",
 		description: "Close or dry-run closing a local Maglev PR Bench with safety planning and explicit warning acknowledgement.",
 		promptSnippet: "Plan or execute safe closure of a local PR Bench for OneBusAway/maglev.",
@@ -770,12 +786,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_review_json",
-		label: "Maglev PR Review JSON",
+		name: "maglev_pr_review_draft_save",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev PR Review Draft Save",
 		description: "Validate an already-decided GitHub PR review and write or overwrite the current prospective review JSON draft for the PR. Never submits to GitHub.",
 		promptSnippet: "Write the current validated prospective PR review JSON draft for OneBusAway/maglev.",
 		promptGuidelines: [
-			"Use maglev_pr_review_json when the maintainer asks to package already-decided PR review comments as JSON.",
+			"Use maglev_pr_review_draft_save when the maintainer asks to package already-decided PR review comments as JSON.",
 			"Do not invent review findings in this tool flow; run review analysis first, then pass the settled event, summary body, and inline comments to this tool.",
 			"This tool overwrites the current pr-<N>.json draft and validates inline comment locations against the current PR diff; it never submits a GitHub review.",
 		],
@@ -800,11 +817,12 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_review_json_clear",
-		label: "Maglev PR Review JSON Clear",
+		name: "maglev_pr_review_draft_clear",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev PR Review Draft Clear",
 		description: "Delete the current prospective PR review JSON draft for a PR. Never submits to GitHub.",
 		promptSnippet: "Delete the current prospective PR review JSON draft for OneBusAway/maglev.",
-		promptGuidelines: ["Use maglev_pr_review_json_clear when the settled outcome is no prospective review comments for the PR."],
+		promptGuidelines: ["Use maglev_pr_review_draft_clear when the settled outcome is no prospective review comments for the PR."],
 		parameters: ReviewJsonClearParamsSchema,
 		async execute(_toolCallId, params) {
 			const result = await clearReviewJsonArtifact(params, {
@@ -821,11 +839,12 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_review_json_list",
-		label: "Maglev PR Review JSON List",
+		name: "maglev_pr_review_draft_list",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev PR Review Draft List",
 		description: `List current prospective PR review JSON drafts from the centralized ${DISPLAY_NAME} directory.`,
 		promptSnippet: "List current prospective PR review JSON drafts.",
-		promptGuidelines: ["Use maglev_pr_review_json_list to find current review JSON drafts before loading one for discussion."],
+		promptGuidelines: ["Use maglev_pr_review_draft_list to find current review JSON drafts before loading one for discussion."],
 		parameters: ReviewJsonListParamsSchema,
 		async execute(_toolCallId, params) {
 			const artifacts = await listReviewJsonArtifacts(params, { reviewJsonDir: REVIEW_JSON_DIR });
@@ -838,12 +857,13 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_review_json_load",
-		label: "Maglev PR Review JSON Load",
+		name: "maglev_pr_review_draft_load",
+		namespace: MAGLEV_TOOL_NAMESPACE,
+		label: "Maglev PR Review Draft Load",
 		description: "Load a current prospective PR review JSON draft into model context for discussion. Never submits to GitHub.",
 		promptSnippet: "Load a current prospective PR review JSON draft for discussion.",
 		promptGuidelines: [
-			"Use maglev_pr_review_json_load when the maintainer wants to discuss or revise a current prospective PR review JSON draft.",
+			"Use maglev_pr_review_draft_load when the maintainer wants to discuss or revise a current prospective PR review JSON draft.",
 			"Loading a draft is read-only and does not submit a GitHub review.",
 		],
 		parameters: ReviewJsonLoadParamsSchema,
@@ -855,6 +875,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "maglev_pr_decisions",
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Decisions",
 		description: "List, get, upsert, or delete Maglev PR triage decisions in the durable decisions file.",
 		promptSnippet: "Read or update durable Maglev PR triage decisions.",

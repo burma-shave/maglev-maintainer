@@ -13,7 +13,7 @@ OS root access: do not add `sudo`, request tokens, or change authentication.
 
 ## Resolve and place
 
-1. Call `maglev_pr_workspace_context` first. Use
+1. Call `maglev_workspace_context` first. Use
    `artifacts.generatedScriptsDir`, or `<maintainerRoot>/scripts` if the running
    extension predates that field. Respect configured roots; do not hard-code
    `/home/pi/scripts`, `/workspace`, or a Bench checkout.

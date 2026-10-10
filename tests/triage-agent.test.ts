@@ -16,7 +16,7 @@ test("package exposes the fresh-context read-only triage analyst", async () => {
 	assert.match(agent, /^acceptanceRole: read-only$/m);
 	assert.match(agent, /^inheritSkills: true$/m);
 	const tools = agent.match(/^tools: (.+)$/m)![1].split(",").map((tool) => tool.trim());
-	assert.deepEqual(tools, ["read", "maglev_pr_workspace_context", "maglev_pr_snapshot_staleness", "maglev_pr_load_metadata", "maglev_pr_state_query"]);
+	assert.deepEqual(tools, ["read", "maglev_workspace_context", "maglev_pr_snapshot_staleness", "maglev_pr_load_metadata", "maglev_pr_state_query"]);
 	const provider = agent.match(/^subagentOnlyExtensions: (.+)$/m)![1];
 	await access(new URL(provider, file));
 	assert.ok(!/^skills:|^skillPath:/m.test(agent));

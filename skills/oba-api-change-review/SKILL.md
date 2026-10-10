@@ -9,9 +9,9 @@ Focused entry point for reviewing a Maglev OBA API behavior change. Determines w
 
 Use this for a focused behavior review of a PR, branch, working tree, or proposed change. For the full PR/spec-maintenance workflow that gathers PR comments, assigns `SD-*` IDs, asks for decisions, and writes wiki/comment handoffs, use `oba-api-pr-spec-review` instead.
 
-This Maglev Maintainer packaged skill is meant to run from a normal `maglev` checkout or from a PR Bench checkout. At the start, call `maglev_pr_workspace_context`; if the source is a PR number, pass that PR number. Use the returned current/target PR Bench paths, artifact directories, and companion repo resolver capability instead of assuming `/workspace` or repo-local output paths.
+This Maglev Maintainer packaged skill is meant to run from a normal `maglev` checkout or from a PR Bench checkout. At the start, call `maglev_workspace_context`; if the source is a PR number, pass that PR number. Use the returned current/target PR Bench paths, artifact directories, and companion repo resolver capability instead of assuming `/workspace` or repo-local output paths.
 
-`oba-api-client-impact` needs source from `wayfinder`, `js-sdk`, `onebusaway-ios`, and `onebusaway-android`; Java-behavior checks may need `onebusaway-application-modules` / `oba-java`; `oba-api-spec-check` and `oba-api-goal-check` need `maglev.wiki`. Resolve those through the packaged `oba-workspace` skill / `maglev_pr_companion_repos` tool and include any caveats in the final report.
+`oba-api-client-impact` needs source from `wayfinder`, `js-sdk`, `onebusaway-ios`, and `onebusaway-android`; Java-behavior checks may need `onebusaway-application-modules` / `oba-java`; `oba-api-spec-check` and `oba-api-goal-check` need `maglev.wiki`. Resolve those through the packaged `oba-workspace` skill / `maglev_companion_repos_resolve` tool and include any caveats in the final report.
 
 ## Wiki specs quick reference
 
@@ -38,7 +38,7 @@ Strip a trailing `--output` or `--output <path>` token from the argument before 
 
 ### 0. Load Maglev Maintainer context
 
-Call `maglev_pr_workspace_context` before inspecting paths or choosing output locations. If the parsed source is a PR number, pass it as `pr`; otherwise call with no arguments. Carry the returned context through the review, especially `benches.*`, `artifacts.targetReportsDir`, and `companionRepos.resolverTool`.
+Call `maglev_workspace_context` before inspecting paths or choosing output locations. If the parsed source is a PR number, pass it as `pr`; otherwise call with no arguments. Carry the returned context through the review, especially `benches.*`, `artifacts.targetReportsDir`, and `companionRepos.resolverTool`.
 
 ### 1. Resolve the diff source
 
@@ -181,7 +181,7 @@ Skip this report-file step if `--output` was not given; the prospective PR draft
 
 If `--output <path>` was given, write the exact report content from step 7 to `<path>` verbatim (no truncation or reformatting), creating parent directories if needed.
 
-If `--output` was given with no path, follow `../librarian/SKILL.md` and use the `maglev_pr_workspace_context` result. Use `<artifacts.targetReportsDir>/oba-api-change-review-<slug>-<timestamp>.md` for the applicable PR or branch Bench; an associated branch Bench keeps its original reports path. With no applicable Bench, use `<maintainerRoot>/plans/oba-api-change-review-<slug>-<timestamp>.md`. Do not default to checkout-local `tmp/` or start a Bench merely to store a report. Preserve an explicitly requested output destination, subject to repository instructions.
+If `--output` was given with no path, follow `../maglev-artifacts/SKILL.md` and use the `maglev_workspace_context` result. Use `<artifacts.targetReportsDir>/oba-api-change-review-<slug>-<timestamp>.md` for the applicable PR or branch Bench; an associated branch Bench keeps its original reports path. With no applicable Bench, use `<maintainerRoot>/plans/oba-api-change-review-<slug>-<timestamp>.md`. Do not default to checkout-local `tmp/` or start a Bench merely to store a report. Preserve an explicitly requested output destination, subject to repository instructions.
 
 Create the chosen parent directory before writing.
 

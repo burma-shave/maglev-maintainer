@@ -8,7 +8,7 @@ description: Run Claude Code /code-review for a Maglev PR by number without requ
 
 ## Workflow
 
-1. Resolve the PR number and call `maglev_pr_workspace_context` with `pr` for configured artifact paths. Do not inspect or start Benches or require an existing checkout.
+1. Resolve the PR number and call `maglev_workspace_context` with `pr` for configured artifact paths. Do not inspect or start Benches or require an existing checkout.
 2. Call `maglev_pr_code_review` with `pr` alone by default. For a supplied checkout, call `maglev_pr_code_review` with explicit `workingDirectory`. The default timeout is 1200 seconds; `timeoutSeconds` may be set up to 3600.
 3. Let the underlying Claude `/code-review` command manage its own review and validation workflow. Do not add instructions limiting checkouts, dependency installation, builds or tests. Use the tool rather than invoking Claude CLI directly.
 4. Inspect the returned status, output and `logPath`; read the full log when needed. A failed, timed-out, or incomplete run is not a clean review. Report actual failures or eligibility skips, findings, validation results and limitations. Do not classify checkout/test activity as a violation or reject it merely because no checkout existed when review began.

@@ -11,8 +11,8 @@ inventory and `docs/design.md` for architecture and explicitly planned UI work.
 Develop in the active repository checkout, not a hard-coded workspace path.
 On this host that checkout is `/home/pi/maglev-pr-maintainer`; other installations
 may differ. Maintainer state and target Maglev source are separate from package
-source. Use `maglev_pr_workspace_context` for configured paths, and
-`maglev_pr_checkout` when target source is needed outside a Bench.
+source. Use `maglev_workspace_context` for configured paths, and
+`maglev_checkout` when target source is needed outside a Bench.
 
 Do not edit old global extensions, skills, or helper scripts without an explicit
 request. Historical migration references included:
@@ -138,7 +138,7 @@ basis-stamping limitations remain open findings F3/F4; do not claim they are fix
 it must not invent findings or submit reviews. OBA API review is a distinct
 behavior/client/spec review, not a replacement for general code review.
 
-The current explicitly requested `maglev_pr_bench_kickoff` template composes code
+The current explicitly requested `maglev_pr_review_instructions_load` template composes code
 review and draft creation. It is never invoked by start/recovery. Whenever settled
 actionable PR review findings emerge in any context (Claude Code, API/spec,
 manual investigation, or maintainer discussion), invoke `maglev-pr-review-draft`
@@ -146,14 +146,14 @@ and save them automatically. No separate draft request or review-only mode exist
 A review handoff must include the saved draft path/event or a concrete save blocker.
 No findings alone is not approval; failed/incomplete reviews must not clear drafts.
 
-Prospective review JSON must be written through `maglev_pr_review_json`, and
+Prospective review JSON must be written through `maglev_pr_review_draft_save`, and
 cleared through its dedicated tool. Keep summary/comments PR-facing; report local
 housekeeping separately. Claude command/plugin publication behavior is an open
 deployment verification issue (F7), not guaranteed by a local review wrapper.
 
 ### Documents and privileged handoffs
 
-Follow `librarian` for working documents: returned `artifacts.targetReportsDir`
+Follow `maglev-artifacts` for working artifacts: returned `artifacts.targetReportsDir`
 for PR or branch Bench reports; `<maintainerRoot>/plans/` when no Bench applies.
 Respect explicitly requested destinations. Repository documentation intended for
 commit belongs in the repository. Do not default reports to checkout-local `tmp/`.

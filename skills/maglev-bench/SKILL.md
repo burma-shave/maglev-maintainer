@@ -1,48 +1,113 @@
 ---
 name: maglev-bench
 compatibility: Requires the Maglev Maintainer extension tools.
-description: Manage branch-based Maglev Benches for development, including opening existing branches, creating a branch from a base, inspecting/recovering/closing environments, and associating an existing Bench with a PR.
+description: Manage Maglev Benches by branch or PR, including opening, creating a branch from a base, listing, inspecting, recovering, associating with a PR, resetting to a PR head, and closing. PR association enriches the same environment without changing its identity or paths.
 ---
 
 # Maglev Bench
 
 A Bench is an independent Maglev checkout tied to a branch, with a stable ID,
 tmux session, Pi window, startup context, and external artifacts. A PR Bench is
-that same environment enriched with a PR association, not another implementation.
+that same environment enriched with a PR association, not a separate environment
+or lifecycle. Use this skill for both branch development and PR review environments.
 
-1. Call `maglev_pr_workspace_context` first. Use returned paths/capabilities.
-2. Use `maglev_bench_list` and `maglev_bench_inspect` for local state. IDs are
-   distinct from branch names; never guess paths from a sanitized branch name.
-3. On explicit request, use `maglev_bench_start` with `branch`. Omit `createFrom`
-   to open an existing origin branch; supply it only when the user explicitly
-   wants a new branch (e.g. `origin/main`). Initial scope is OneBusAway/maglev.
-4. Start/close/association default to plans. Set `apply: true` only for an explicit
-   user request, and report refusals/warnings before applying acknowledgements.
-5. Startup `context` is background appended only to a new Pi session's system
-   prompt. It submits no task/review. An existing Pi window cannot receive new
-   context through start. Do not invoke PR review kickoff automatically.
-6. Start/recovery never pulls or resets existing branches. A branch mismatch is a
-   refusal, not permission to switch/reset work. Check returned verification
-   before claiming a complete environment.
-7. Unassociated branch Benches need no snapshot or triage decision. Before PR
-   association, check snapshot staleness and refresh if needed unless live GitHub
-   calls are prohibited. Use `maglev_bench_associate_pr` with the existing ID and
-   PR number. Head repository/branch must match; a PR cannot have another Bench.
-   Association preserves all paths and active sessions. Use PR tools/skill after
-   association for PR-specific review/head-reset workflows.
-8. Cleanup must protect dirty/ignored files and committed work. Show all warnings:
-   `allowDirty` covers files (`any` includes ignored files), `allowStale` only
-   covers PR-head mismatch, and `allowLocalCommits` separately acknowledges
-   committed-work loss or unknown preservation. Before cleanup, run
-   `git fetch origin --prune` from the returned checkout path and inspect again
-   (unless live network calls are prohibited). Report fetch failures; do not
-   silently treat stale refs as live proof. Checks cover all live local refs,
-   including HEAD, other branches/stash, but not reflog-only history. Missing
-   upstream alone is not unsafe if all commits are reachable from remote refs.
-   Push or otherwise preserve remaining local-only work first. To stop tmux while
-   preserving checkout/artifacts, set `removeCheckout: false`.
-9. API runtimes accept `benchId` (mutually exclusive with `pr`/`workingDirectory`).
-   Stop services explicitly before removing their source checkout; Bench closure
-   does not stop Docker runtimes. Prefer returned per-Bench report directories.
+## Resolve and inspect
 
-Do not edit Bench manifests directly or call legacy low-level helper scripts.
+1. Call `maglev_workspace_context` first. Pass `pr` or `benchId` when known
+   (mutually exclusive), and use returned paths/capabilities.
+2. Prefer `maglev_bench_list` for all Benches and `maglev_bench_inspect` with the
+   stable ID for inspection. IDs are distinct from branch names; never guess
+   paths from a sanitized branch name. PR-number adapters
+   `maglev_pr_bench_list` and `maglev_pr_bench_inspect` remain useful for PR-only
+   listings or when only a PR number is known.
+3. Before work depending on remote PR metadata, call
+   `maglev_pr_snapshot_staleness`; if `shouldRefresh` is true, call
+   `maglev_pr_refresh_metadata` unless live GitHub calls are prohibited.
+   Unassociated branch Benches need no snapshot or triage decision.
+
+## Open, create, or recover
+
+- For a branch, use `maglev_bench_start` with `branch`. Omit `createFrom` to open
+  an existing origin branch; supply it only when the user explicitly wants a new
+  branch (e.g. from `origin/main`). Initial scope is OneBusAway/maglev.
+- For a PR number, use `maglev_pr_bench_start`. It uses a plain checkout plus
+  `gh pr checkout` and resolves an already-associated branch Bench without
+  changing its identity. It also completes safe partial PR Benches, such as a
+  missing PR branch, tmux session, or `pi` window.
+- Start defaults to a plan. Set `apply: true` only on explicit user request.
+  Inspect existing state first; report refusals and warnings before applying
+  acknowledgements. Start/recovery never pulls or resets existing branches.
+  A branch/path/identity mismatch is a refusal, not permission to switch work.
+- Opening a review Bench is not a merge-readiness decision. Draft status, failing
+  checks, pinned decisions, stale/missing triage inference, merge conflicts, and
+  missing stack-parent Benches are informational, not additional start blockers.
+  Stale/incomplete snapshot data or an existing HEAD mismatch still require
+  explicit start-safety acknowledgement. Preserve path/identity refusals.
+- Do not claim a Bench was started or completed unless the result says
+  `applied: true`; check returned verification before claiming completeness.
+- Optional startup `context` carries goals, findings, constraints, and references
+  as background appended only to a new Pi session's system prompt. It submits
+  no task, review, or model turn. Dry runs write no files; blank context is
+  ignored. An existing Pi window cannot receive new context through start.
+
+## Associate with a PR
+
+Check snapshot freshness first, then use `maglev_bench_associate_pr` with the
+existing stable ID and PR number. Association defaults to a plan; apply only on
+explicit request. Head repository/branch must match, and the PR cannot already
+have another Bench. Association preserves branch, ID, checkout, tmux/Pi session,
+and artifact paths. Continue using this skill after association; PR-specific
+adapters resolve the same environment.
+
+## Update after a PR force-push
+
+Use `maglev_pr_bench_reset` for an existing Bench whose HEAD is displaced by a
+contributor force-push, not Bench start. Refresh stale metadata first and inspect
+local state. Reset defaults to a plan; apply only on explicit request after
+showing warnings and obtaining explicit acknowledgement for discarded files.
+
+Reset does **not** have close's committed-work protection. Preserve displaced
+local-only or unpushed committed work before resetting; a clean checkout is not
+proof that reset is safe. Do not describe reset as protecting commits.
+
+## Close or stop the session
+
+Prefer `maglev_bench_close` with the stable ID. `maglev_pr_bench_close` remains a
+PR-number shortcut over the shared lifecycle. Both default to plans; apply only
+on explicit request after inspection and required warning acknowledgements.
+
+- Show all cleanup warnings. `allowDirty` covers files (`any` includes ignored
+  files); `allowStale` only covers PR-head mismatch. `allowLocalCommits` separately
+  acknowledges committed-work loss or unknown preservation.
+- Before cleanup, run `git fetch origin --prune` from the returned checkout path
+  and inspect again, unless live network calls are prohibited. Report fetch
+  failures; do not silently treat stale refs as live proof of preservation.
+- Checks cover all live local refs, including HEAD, other branches, and stash,
+  but not reflog-only history. A missing upstream alone is not unsafe if all
+  commits are reachable from remote refs. A clean working directory is not proof
+  that deletion is safe. Push or otherwise preserve remaining local-only work.
+- To stop tmux while preserving checkout/artifacts, set `removeCheckout: false`.
+- API runtimes accept `benchId` (mutually exclusive with `pr`/`workingDirectory`).
+  Stop services explicitly before removing their source checkout; Bench closure
+  does not stop Docker runtimes.
+
+## Commands and related workflows
+
+Prefer `/maglev-benches` and the `/maglev-bench-*` command family for stable-ID
+operations. Existing `/maglev-pr-benches` and `/maglev-pr-bench-*` commands remain
+PR-number shortcuts; PR reset remains a PR-specific operation. Commands differ
+in argument and confirmation handling; follow their documented usage rather than
+assuming the general start command accepts a PR number.
+
+Review and draft creation are separate from lifecycle. Do not invoke
+`maglev_pr_review_instructions_load` automatically after starting or recovering a Bench.
+Only load kickoff on explicit request and follow its instructions from the
+specified checkout. Use `../maglev-pr-code-review/SKILL.md` for standalone Claude
+Code review and `../maglev-pr-review-draft/SKILL.md` for settled findings. Starting
+or recovering a Bench runs neither automatically.
+
+Use `../maglev-artifacts/SKILL.md` for artifact placement and the returned
+per-Bench report directory. Do not edit Bench manifests directly or call legacy
+low-level helper scripts. Do not make triage/chase decisions here; hand off to
+`maglev-pr-triage` when needed. Use Bench terminology generally and PR Bench when
+its PR association matters.

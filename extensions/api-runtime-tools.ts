@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { MAGLEV_TOOL_NAMESPACE } from "./tool-namespace.ts";
 import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { manageRuntime, runtimeIdentity } from "./api-runtime.ts";
@@ -28,11 +29,12 @@ export function registerApiRuntimeTools(pi: ExtensionAPI) {
 			} : {}),
 		});
 		pi.registerTool({
-			name: `maglev_pr_api_${action}`,
-			label: `Maglev PR API ${action}`,
+			name: `maglev_api_runtime_${action}`,
+			namespace: MAGLEV_TOOL_NAMESPACE,
+			label: `Maglev API Runtime ${action}`,
 			description: `${action === "status" ? "Inspect readiness and containers for" : `Plan or execute ${action} of`} a local Maglev or pinned legacy OBA Docker runtime. Isolated Compose projects, loopback ports, shared GTFS defaults.`,
 			promptSnippet: `${action} a Maglev or legacy OBA API runtime.`,
-			promptGuidelines: ["Use maglev_pr_workspace_context first. Start/stop are dry-run by default; apply only on explicit user request. Show warnings before destructive volume removal. Status never starts containers. Services persist beyond the Pi session; stop explicitly."],
+			promptGuidelines: ["Use maglev_workspace_context first. Start/stop are dry-run by default; apply only on explicit user request. Show warnings before destructive volume removal. Status never starts containers. Services persist beyond the Pi session; stop explicitly."],
 			parameters,
 			async execute(_id, params, signal, _onUpdate, ctx) {
 				const prBenchId = params.pr ? (await loadBenchDefinitions()).find((bench) => bench.pr === params.pr)?.id : undefined;

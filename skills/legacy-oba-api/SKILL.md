@@ -7,12 +7,12 @@ description: Start, inspect, or stop the pinned legacy Java OneBusAway API servi
 
 Manage service lifecycle only. Do not infer or initiate testing, analysis, comparison, or any other activity from a request to start or stop the service.
 
-1. Call `maglev_pr_workspace_context` before resolving runtime paths.
-2. Use `maglev_pr_api_start` with `implementation: "legacy"`. Do not supply `pr` or `workingDirectory`; this runtime uses the version pinned in the package's `assets/legacy-oba/VERSION`.
+1. Call `maglev_workspace_context` before resolving runtime paths.
+2. Use `maglev_api_runtime_start` with `implementation: "legacy"`. Do not supply `pr` or `workingDirectory`; this runtime uses the version pinned in the package's `assets/legacy-oba/VERSION`.
 3. Dry-run is the default. Set `apply: true` only when the user explicitly requests starting the legacy API. Do not start services merely because another task might benefit from them.
 4. Wait for successful completion and capture `version`, `sourcePath`, `baseUrl`, `apiKey`, and `ready`. Report these service details to the user. The tool caches matching Java source under the maintainer root and builds Maven artifacts for the pinned version.
-5. Use `maglev_pr_api_status` with `implementation: "legacy"` to inspect readiness and container state. Even already-running services must pass the non-empty agencies readiness check.
-6. On an explicit stop request, use `maglev_pr_api_stop` with `implementation: "legacy", apply: true`. GTFS bundle and MySQL volumes are preserved by default. Only use `removeVolumes: true` after explicit permission to destroy those data; use `removeImages: true` only when image removal is requested.
+5. Use `maglev_api_runtime_status` with `implementation: "legacy"` to inspect readiness and container state. Even already-running services must pass the non-empty agencies readiness check.
+6. On an explicit stop request, use `maglev_api_runtime_stop` with `implementation: "legacy", apply: true`. GTFS bundle and MySQL volumes are preserved by default. Only use `removeVolumes: true` after explicit permission to destroy those data; use `removeImages: true` only when image removal is requested.
 
 ## Defaults and caveats
 

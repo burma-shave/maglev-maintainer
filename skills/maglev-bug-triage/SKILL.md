@@ -37,7 +37,7 @@ Examples:
 
 ### 1. Load context and criteria
 
-Call `maglev_pr_workspace_context` first, without interpreting an issue number as its `pr` argument. Use returned paths and capabilities rather than assuming a checkout location.
+Call `maglev_workspace_context` first, without interpreting an issue number as its `pr` argument. Use returned paths and capabilities rather than assuming a checkout location.
 
 Read `criteria.md` next to this `SKILL.md` in full before assigning a verdict, severity, or effort. It is the authoritative classification rubric; do not substitute a remembered scale.
 
@@ -61,14 +61,14 @@ Separate reported claims from independently verified facts. Ask focused question
 
 ### 3. Establish the investigation target and expected behavior
 
-Use the current Maglev checkout, an explicitly supplied path, or an existing PR Bench only when it matches the requested investigation. Verify repository identity, `git rev-parse HEAD`, and `git status --short`. Record the revision and relevant local modifications; preserve all existing work. If no suitable checkout is available, use `maglev_pr_checkout` in dry-run mode to resolve/plan the managed Maglev source checkout. If it is missing, ask permission before setting `apply: true` to clone; follow the `maglev-checkout` skill. Otherwise ask for a checkout or give a limited assessment rather than silently cloning or checking out code.
+Use the current Maglev checkout, an explicitly supplied path, or an existing PR Bench only when it matches the requested investigation. Verify repository identity, `git rev-parse HEAD`, and `git status --short`. Record the revision and relevant local modifications; preserve all existing work. If no suitable checkout is available, use `maglev_checkout` in dry-run mode to resolve/plan the managed Maglev source checkout. If it is missing, ask permission before setting `apply: true` to clone; follow the `maglev-checkout` skill. Otherwise ask for a checkout or give a limited assessment rather than silently cloning or checking out code.
 
 Distinguish the reported version from the inspected version. A fix on the current branch does not disprove a bug on an older release; report version-specific findings.
 
 Establish expected behavior from applicable specifications, documented contracts, and supported configurations—not merely from what the current implementation or its tests do.
 
 For OBA API behavior:
-- Resolve `maglev.wiki` with `maglev_pr_companion_repos`, requesting only needed repositories. This resolver can clone/update reference repos; carry its warnings/notes into the report and respect any user restriction on network activity.
+- Resolve `maglev.wiki` with `maglev_companion_repos_resolve`, requesting only needed repositories. This resolver can clone/update reference repos; carry its warnings/notes into the report and respect any user restriction on network activity.
 - Read `OBA-API-Specs.md` first, then the relevant endpoint pages and linked shared-behavior pages.
 - Check **Implementation Decisions** and **Suspected Defects**. An accepted deviation may explain intentional behavior; a suspected defect is not confirmation by itself.
 - Consult legacy Java or client source through the companion resolver only when needed. Legacy behavior is evidence, not automatically Maglev's required behavior.

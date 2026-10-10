@@ -11,7 +11,7 @@ test("review skills are discoverable through the package skills directory", asyn
 		const text = await skill(name);
 		assert.ok(text.startsWith(`---\nname: ${name}\n`));
 		assert.match(text, /\ndescription: .+\n/);
-		assert.match(text, /maglev_pr_workspace_context/);
+		assert.match(text, /maglev_workspace_context/);
 	}
 });
 
@@ -30,7 +30,7 @@ test("code-review skill separates review validation from draft mutation", async 
 
 test("draft skill accepts settled findings from any source and uses validated tools", async () => {
 	const text = await skill("maglev-pr-review-draft");
-	for (const tool of ["maglev_pr_review_json", "maglev_pr_review_json_clear", "maglev_pr_review_json_list", "maglev_pr_review_json_load"]) {
+	for (const tool of ["maglev_pr_review_draft_save", "maglev_pr_review_draft_clear", "maglev_pr_review_draft_list", "maglev_pr_review_draft_load"]) {
 		assert.ok(text.includes(tool));
 	}
 	assert.match(text, /Do not invent findings, run a new review/);

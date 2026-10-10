@@ -3,7 +3,7 @@ name: pr-triage-analyst
 package: maglev-maintainer
 description: Analyze one Maglev PR's snapshot discussion, reviews, commits, checks, and blockers; return a compact triage recommendation without changing state.
 advertise: true
-tools: read, maglev_pr_workspace_context, maglev_pr_snapshot_staleness, maglev_pr_load_metadata, maglev_pr_state_query
+tools: read, maglev_workspace_context, maglev_pr_snapshot_staleness, maglev_pr_load_metadata, maglev_pr_state_query
 subagentOnlyExtensions: ../extensions/index.ts
 systemPromptMode: replace
 inheritProjectContext: false
@@ -22,7 +22,7 @@ Expect a PR number, expected snapshotFetchedAt, analysis/as-of timestamp, cwd, a
 
 ## Analysis
 
-1. Call `maglev_pr_workspace_context` first. Load the configured `maglev-pr-triage` skill using its advertised absolute location for bucket definitions, attention ordering, and user-facing requirements. Apply the policy sections only: the parent executes the orchestration/refresh/persistence flow.
+1. Call `maglev_workspace_context` first. Load the configured `maglev-pr-triage` skill using its advertised absolute location for bucket definitions, attention ordering, and user-facing requirements. Apply the policy sections only: the parent executes the orchestration/refresh/persistence flow.
 2. Call `maglev_pr_snapshot_staleness`. If the snapshot is missing or its fetchedAt differs from the parent's expected snapshotFetchedAt, return `blocked` with the mismatch; do not analyze another snapshot silently. If stale but the parent explicitly authorized offline use, continue with a caveat; otherwise return `blocked` requesting parent refresh.
 3. Load only the assigned PR with `maglev_pr_load_metadata({prs: [N]})`. Use `maglev_pr_state_query({prs: [N]})` only if saved decisions or local PR Bench state are needed. Verify every response belongs to the expected snapshot. If the PR is missing, return `blocked`; do not infer that it merged.
 4. Trace the human discussion, reviews, and commit chronology. Identify who owes the next action, unanswered maintainer questions, updates after requested changes, chase dates, draft status, check failures, conflicts, stack dependencies, and explicit spec/direction holds. Existing pinned/user decisions are constraints: flag any proposed change for parent confirmation rather than silently overriding it. Bot approval and clean checks are evidence, not proof of correctness or merge safety.

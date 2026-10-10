@@ -16,7 +16,7 @@ Use this skill to infer PR buckets from the durable Maglev Maintainer GitHub sna
 - Do not craft ad-hoc shell/Python/JQ scripts to inspect Maglev state JSON; use `maglev_pr_state_query` when exact joined snapshot/decision/PR Bench fields need to enter model context.
 - Parent-context guardrail: never call `maglev_pr_state_query` with `selection: "all"`, an omitted PR filter, or a multi-PR backlog filter to obtain an overview. Its output includes full commits, reviews, and comments, not a compact summary. Likewise, never bulk-load backlog metadata with `maglev_pr_load_metadata`. Pagination or multiple small batches do not bypass this rule. Parent-side exact-state queries are limited to one disputed PR or explicitly identified Bench reconciliation facts.
 - Do not depend on old TUI-exported `needs-refresh` files.
-- Do not start or close PR Benches unless the user explicitly asks; hand off to `maglev-pr-bench` for that.
+- Do not start or close PR Benches unless the user explicitly asks; hand off to `maglev-bench` for that.
 - If the maintainer indicates that a PR has been merged, landed, or closed, do not automatically close anything. If a PR number is known, check for a local PR Bench with `maglev_pr_bench_list` for that PR and prompt the maintainer to clean it up if one exists. If no PR number is known, ask which PR was merged before checking.
 - Do not write relative temporal phrases such as `today`, `yesterday`, `recently`, or `this morning` into durable decision `reason` or `observations`; use absolute dates from the snapshot instead, such as `maintainer chased on 2026-09-05`.
 - Do not parallelize `maglev_pr_decisions` mutations; upsert/delete calls should run sequentially so durable decision updates are easy to audit.

@@ -6,8 +6,8 @@ description: Resolve or clone the main OneBusAway/maglev source checkout indepen
 
 # Maglev Checkout
 
-1. Call `maglev_pr_workspace_context` first. Its `maglevCheckout.path` is the managed source checkout; do not assume `/workspace/maglev` exists.
-2. Call `maglev_pr_checkout` to inspect or plan. It defaults to `<maintainer-root>/checkouts/maglev`, or `$OBA_WORKSPACE/maglev` when set. Pass `path` for an explicitly supplied checkout root.
+1. Call `maglev_workspace_context` first. Its `maglevCheckout.path` is the managed source checkout; do not assume `/workspace/maglev` exists.
+2. Call `maglev_checkout` to inspect or plan. It defaults to `<maintainer-root>/checkouts/maglev`, or `$OBA_WORKSPACE/maglev` when set. Pass `path` for an explicitly supplied checkout root.
 3. Set `apply: true` only when the user explicitly requests a clone/checkout. Otherwise show the missing-checkout plan and ask permission before cloning. Dry-run does not create directories or access the network.
 4. Use the returned path only when `ready: true`. Report revision, branch/detached HEAD, dirty state, and all warnings/errors. `ok: true` with `ready: false` means only a plan, not an available checkout.
 
@@ -18,7 +18,7 @@ description: Resolve or clone the main OneBusAway/maglev source checkout indepen
 - Existing checkouts are inspected read-only, never fetched, pulled, switched, reset, or cleaned—even with `apply: true`.
 - A requested ref on an existing checkout must resolve locally to its current HEAD. Otherwise the tool refuses. Ask for a separate `path` to clone that ref, rather than discarding or switching local work.
 - Failed clones are not published; only the tool's own temporary staging directory is cleaned up.
-- For a specific PR's review environment, use `maglev-pr-bench` instead. This tool does not create a tmux session, start Pi, run tests, or start API services.
+- For a specific PR's review environment, use `maglev-bench` instead. This tool does not create a tmux session, start Pi, run tests, or start API services.
 
 Examples:
 

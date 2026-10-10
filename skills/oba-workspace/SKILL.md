@@ -17,12 +17,12 @@ Use this skill when OBA API/spec review skills need local source for:
 - `onebusaway-android`
 - `onebusaway-application-modules` / `oba-java`
 
-For **Maglev itself**, use the `maglev-checkout` skill and `maglev_pr_checkout` tool; it is not a companion repo. For a specific PR checkout, use `maglev-pr-bench`.
+For **Maglev itself**, use the `maglev-checkout` skill and `maglev_checkout` tool; it is not a companion repo. For a branch or PR environment, use `maglev-bench`.
 
 ## Rules
 
-- First call `maglev_pr_workspace_context` to get the maintainer root and companion repo policy.
-- Then call `maglev_pr_companion_repos` with the requested repos.
+- First call `maglev_workspace_context` to get the maintainer root and companion repo policy.
+- Then call `maglev_companion_repos_resolve` with the requested repos.
 - Do not call `/workspace/agentic/skills/lib/resolve-oba-repo.sh`.
 - Do not assume repos live under `/workspace`.
 - Include any returned `warning` or `note` anomalies in the calling review's caveats.
@@ -55,9 +55,9 @@ maglev.wiki
 
 ## Steps
 
-1. Call `maglev_pr_workspace_context` with no `pr` unless the caller provided a PR number as separate context.
-2. Parse requested repo names. If none were provided, omit `repos` when calling `maglev_pr_companion_repos` so it resolves all known repos.
-3. Call `maglev_pr_companion_repos` with the requested `repos` array.
+1. Call `maglev_workspace_context` with no `pr` unless the caller provided a PR number as separate context.
+2. Parse requested repo names. If none were provided, omit `repos` when calling `maglev_companion_repos_resolve` so it resolves all known repos.
+3. Call `maglev_companion_repos_resolve` with the requested `repos` array.
 4. Report a compact table:
 
 | Repo | Path | Class | Source | State | Caveats |

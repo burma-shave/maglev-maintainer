@@ -9,7 +9,7 @@ Use this skill to review a Maglev pull request for OBA API / legacy Java / wiki 
 
 Use this when you need the full PR/spec-maintenance process: confirm the true PR diff, gather PR comments, run/reuse `oba-api-change-review`, enumerate spec-deviation decisions with stable `SD-*` IDs, walk the user through those decisions, and write wiki/actionable-comment handoff files. For a smaller standalone behavior review, use `oba-api-change-review`.
 
-This packaged version is integrated with Maglev Maintainer. At the start, call `maglev_pr_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_pr_companion_repos` / packaged `oba-workspace`, not shell resolver scripts or hard-coded `/workspace` paths.
+This packaged version is integrated with Maglev Maintainer. At the start, call `maglev_workspace_context`; if a PR number is known, pass it as `pr`. Prefer the returned `artifacts.targetReportsDir` for generated review reports and handoff files. Resolve companion repos through `maglev_companion_repos_resolve` / packaged `oba-workspace`, not shell resolver scripts or hard-coded `/workspace` paths.
 
 ## Wiki specs quick reference
 
@@ -42,7 +42,7 @@ Optional argument: PR number or branch description. Prefer the current branch PR
 
 ## Phase 0: Confirm PR and true diff
 
-0. Load Maglev Maintainer context. If an explicit PR number was provided, call `maglev_pr_workspace_context` with that PR. If not, call it with no arguments, infer the PR from the current branch/PR Bench if possible, then call it again with the confirmed PR once known. Record `artifacts.targetReportsDir`; this is the preferred output directory for this workflow.
+0. Load Maglev Maintainer context. If an explicit PR number was provided, call `maglev_workspace_context` with that PR. If not, call it with no arguments, infer the PR from the current branch/PR Bench if possible, then call it again with the confirmed PR once known. Record `artifacts.targetReportsDir`; this is the preferred output directory for this workflow.
 
 1. Confirm the PR:
 
@@ -74,17 +74,17 @@ Use `origin/<baseRefName>...HEAD`, not `branch..HEAD`, because long-lived branch
 
 ### 1. Resolve reference repos needed for Java behavior
 
-Resolve the legacy Java repo before evaluating Java behavior using `maglev_pr_companion_repos` directly or the packaged skill:
+Resolve the legacy Java repo before evaluating Java behavior using `maglev_companion_repos_resolve` directly or the packaged skill:
 
 ```text
 /skill:oba-workspace oba-java
 ```
 
-`oba-java` is an alias for `onebusaway-application-modules` and is treated as a reference-only repo, so the resolver fast-forwards it when safe. Include any resolver caveats in the final report. If an issue requires checking client impact and the API change review did not already do that, resolve the client repos through `maglev_pr_companion_repos` / packaged `oba-workspace` before running `oba-api-client-impact`.
+`oba-java` is an alias for `onebusaway-application-modules` and is treated as a reference-only repo, so the resolver fast-forwards it when safe. Include any resolver caveats in the final report. If an issue requires checking client impact and the API change review did not already do that, resolve the client repos through `maglev_companion_repos_resolve` / packaged `oba-workspace` before running `oba-api-client-impact`.
 
 ### 2. Run OBA API review
 
-Use the packaged `oba-api-change-review` skill. Follow `../librarian/SKILL.md`: save the report under `<artifacts.targetReportsDir>/oba-api-change-review-pr-<PR>.md` for the selected PR/Bench; an associated branch Bench retains its original reports path. If no applicable target directory is available, use `<maintainerRoot>/plans/oba-api-change-review-pr-<PR>.md`. Respect explicitly requested destinations; do not default to checkout-local `tmp/` or start a Bench solely for report storage.
+Use the packaged `oba-api-change-review` skill. Follow `../maglev-artifacts/SKILL.md`: save the report under `<artifacts.targetReportsDir>/oba-api-change-review-pr-<PR>.md` for the selected PR/Bench; an associated branch Bench retains its original reports path. If no applicable target directory is available, use `<maintainerRoot>/plans/oba-api-change-review-pr-<PR>.md`. Respect explicitly requested destinations; do not default to checkout-local `tmp/` or start a Bench solely for report storage.
 
 If invoking manually, use an output flag equivalent to:
 
@@ -251,7 +251,7 @@ If a decision changes a classification, keep the original ID and record the new 
 
 ## Phase 5: Write handoff files
 
-Create the chosen handoff directory if needed. Follow `../librarian/SKILL.md`: use `artifacts.targetReportsDir` from `maglev_pr_workspace_context` for the applicable PR or branch Bench; if unavailable, use `<maintainerRoot>/plans/`. Preserve an explicitly requested destination. Never default handoffs to checkout-local `tmp/`.
+Create the chosen handoff directory if needed. Follow `../maglev-artifacts/SKILL.md`: use `artifacts.targetReportsDir` from `maglev_workspace_context` for the applicable PR or branch Bench; if unavailable, use `<maintainerRoot>/plans/`. Preserve an explicitly requested destination. Never default handoffs to checkout-local `tmp/`.
 
 ### Wiki spec update handoff
 
@@ -353,7 +353,7 @@ validation evidence to the packaged draft skill; no separate draft request is ne
 /skill:maglev-pr-review-draft <PR> <handoff-dir>/pr-<PR>-actionable-comments.md
 ```
 
-That skill uses `maglev_pr_review_json` to validate diff locations and save the
+That skill uses `maglev_pr_review_draft_save` to validate diff locations and save the
 centralized draft; it does not publish. If the maintainer separately requests a
 publication script, use `privileged-handoff-script` with that saved draft. Preserve
 user approval before publication; creating either artifact never authorizes

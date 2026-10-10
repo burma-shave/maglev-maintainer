@@ -15,7 +15,7 @@ Usually you only need `oba-api-change-review` for focused review or `oba-api-pr-
 
 ## Maglev Maintainer integration
 
-These package-local skills should call `maglev_pr_workspace_context` at the start of a workflow. If a PR number is known, pass it as `pr`. Use the returned PR Bench and artifact paths instead of assuming a fixed `/workspace` layout or repo-local `tmp` output directory.
+These package-local skills should call `maglev_workspace_context` at the start of a workflow. If a PR number is known, pass it as `pr`. Use the returned PR Bench and artifact paths instead of assuming a fixed `/workspace` layout or repo-local `tmp` output directory.
 
 Generated reports and handoffs should prefer `artifacts.targetReportsDir`, normally:
 
@@ -26,17 +26,17 @@ Generated reports and handoffs should prefer `artifacts.targetReportsDir`, norma
 For an unassociated branch Bench, pass `benchId` or use detected current Bench
 context and use its returned `artifacts.targetReportsDir`. PR association preserves
 that directory. With no applicable Bench, use `<maintainerRoot>/plans/` for saved
-reports/handoffs. Follow `librarian`, respect explicit output destinations, and do
+reports/handoffs. Follow `maglev-artifacts`, respect explicit output destinations, and do
 not default to checkout-local `tmp/` or start a Bench solely for storage.
 
 Review production and draft packaging are independent: settled findings from
 these API reviews can feed `maglev-pr-review-draft` when a draft is requested.
-That skill writes through `maglev_pr_review_json`; no GitHub review is submitted.
+That skill writes through `maglev_pr_review_draft_save`; no GitHub review is submitted.
 For a separately requested publication script, use `privileged-handoff-script`.
 
 ## Companion repos
 
-Client/spec/Java checks resolve companion repos through `maglev_pr_companion_repos` or the packaged `oba-workspace` skill. By default checkouts live under:
+Client/spec/Java checks resolve companion repos through `maglev_companion_repos_resolve` or the packaged `oba-workspace` skill. By default checkouts live under:
 
 ```text
 /var/lib/maglev-maintainer/companion-repos

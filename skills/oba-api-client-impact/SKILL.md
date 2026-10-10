@@ -7,7 +7,7 @@ description: Sub-skill that assesses impact of OBA API behavior changes on Wayfi
 
 Assess the impact of a production change (or proposed change) on the three OBA clients: Wayfinder + JS SDK, iOS, and Android.
 
-Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-review`. Call directly when you want isolated client analysis without goal/spec review. This packaged version can run from a normal `maglev` checkout or a PR Bench checkout. Call `maglev_pr_workspace_context` first so companion repos and caveats are resolved through the Maglev Maintainer framework.
+Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-review`. Call directly when you want isolated client analysis without goal/spec review. This packaged version can run from a normal `maglev` checkout or a PR Bench checkout. Call `maglev_workspace_context` first so companion repos and caveats are resolved through the Maglev Maintainer framework.
 
 ## Arguments
 
@@ -16,7 +16,7 @@ Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-revie
 
 ## Workspace layout
 
-Each client repo is resolved via the packaged `oba-workspace` skill / `maglev_pr_companion_repos` tool, which returns each repo's local path and anomalies. Paths below are relative to that resolved root:
+Each client repo is resolved via the packaged `oba-workspace` skill / `maglev_companion_repos_resolve` tool, which returns each repo's local path and anomalies. Paths below are relative to that resolved root:
 
 - **JS SDK resource** (repo: `js-sdk`): `src/resources/<endpoint>.ts`, `src/resources/shared.ts`
 - **Wayfinder API route** (repo: `wayfinder`): `src/routes/api/oba/<endpoint>/+server.js` (if it exists) — note `.js`, not `.ts`. If the endpoint takes a path parameter, the file lives one level deeper under a bracketed folder named for that parameter, e.g. `src/routes/api/oba/stops-for-route/[routeId]/+server.js` — the bracket name varies per endpoint (`[id]`, `[stopId]`, `[tripId]`, …), so list the endpoint's directory rather than guessing the exact folder name.
@@ -26,13 +26,13 @@ Each client repo is resolved via the packaged `oba-workspace` skill / `maglev_pr
 - **Android response models** (repo: `onebusaway-android`): `onebusaway-android/src/main/java/org/onebusaway/android/api/contract/ObaApiModels.kt` — a single file with one `kotlinx.serialization` `data class` per response shape, named to match (e.g. `StopsForRoute`).
 - **Android data/adapter layer** (repo: `onebusaway-android`, secondary): `onebusaway-android/src/main/java/org/onebusaway/android/api/data/` (per-feature `*DataSource.kt`, e.g. `RouteStopsDataSource.kt`) and `.../api/adapters/` (per-domain `*Adapters.kt`, e.g. `RouteAdapters.kt`) hold business logic and DTO-to-app-model mapping. These aren't named 1:1 per endpoint — grep for the endpoint's Retrofit method name or response model class name to find the consuming files.
 
-This skill always needs all four client repos, so call `maglev_pr_workspace_context`, then resolve all four repo names (`js-sdk wayfinder onebusaway-ios onebusaway-android`) in one `maglev_pr_companion_repos` call before starting step 2. First use may take a minute to clone. Include any returned caveats/anomalies in the final report (the analysis for that client may be based on out-of-date or locally-modified source) rather than silently proceeding as if the checkouts were unremarkable.
+This skill always needs all four client repos, so call `maglev_workspace_context`, then resolve all four repo names (`js-sdk wayfinder onebusaway-ios onebusaway-android`) in one `maglev_companion_repos_resolve` call before starting step 2. First use may take a minute to clone. Include any returned caveats/anomalies in the final report (the analysis for that client may be based on out-of-date or locally-modified source) rather than silently proceeding as if the checkouts were unremarkable.
 
 ## Steps
 
 ### 0. Load Maglev Maintainer context and client repos
 
-Call `maglev_pr_workspace_context`, then call `maglev_pr_companion_repos` with `repos: ["js-sdk", "wayfinder", "onebusaway-ios", "onebusaway-android"]`. Use the returned paths for all file reads and searches. If any repo has an error anomaly, stop and report it; otherwise include warning/note anomalies as caveats.
+Call `maglev_workspace_context`, then call `maglev_companion_repos_resolve` with `repos: ["js-sdk", "wayfinder", "onebusaway-ios", "onebusaway-android"]`. Use the returned paths for all file reads and searches. If any repo has an error anomaly, stop and report it; otherwise include warning/note anomalies as caveats.
 
 ### 1. Identify the changed behaviours
 

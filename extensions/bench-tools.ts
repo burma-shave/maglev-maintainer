@@ -1,4 +1,5 @@
 import { withFileMutationQueue, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { MAGLEV_TOOL_NAMESPACE } from "./tool-namespace.ts";
 import { Type } from "typebox";
 import { associateBenchPr, closeGeneralBench, collectAllBenchStates, formatBenchClosePlan, formatBenchLine, formatBenchStartPlan, formatBenchStartVerification, inspectGeneralBench, startBranchBench, type BenchStartResult } from "./bench.ts";
 import { BENCH_STATE_DIR } from "./paths.ts";
@@ -22,6 +23,7 @@ function startText(result: BenchStartResult): string {
 }
 export function registerGeneralBenchTools(pi: ExtensionAPI) {
 	pi.registerTool({
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		name: "maglev_bench_list", label: "Maglev Bench List", description: "List all local branch-based Maglev Benches, including PR specializations. Read-only.",
 		parameters: Type.Object({ ids: Type.Optional(Type.Array(id)) }),
 		async execute(_id, params) {
@@ -30,6 +32,7 @@ export function registerGeneralBenchTools(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerTool({
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		name: "maglev_bench_inspect", label: "Maglev Bench Inspect", description: "Inspect any Maglev Bench by stable ID, including dirty files, upstream, and local-only commit safety. Read-only.",
 		parameters: Type.Object({ id }),
 		async execute(_id, params) {
@@ -38,8 +41,9 @@ export function registerGeneralBenchTools(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerTool({
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		name: "maglev_bench_start", label: "Maglev Bench Start", description: "Plan or execute opening/recovering a Maglev Bench on an existing remote branch, or explicitly creating a branch from createFrom. Shared lifecycle with PR Benches; never pulls or resets an existing branch.",
-		promptGuidelines: ["Use maglev_pr_workspace_context first. Dry-run by default; apply only on explicit request. No PR snapshot required for an unassociated branch Bench. Pass startup context only when launching a new Pi window."],
+		promptGuidelines: ["Use maglev_workspace_context first. Dry-run by default; apply only on explicit request. No PR snapshot required for an unassociated branch Bench. Pass startup context only when launching a new Pi window."],
 		parameters: Type.Object({ branch: Type.String({ minLength: 1 }), createFrom: Type.Optional(Type.String({ minLength: 1, description: "Explicitly create a new branch from this ref, e.g. origin/main. Omit to open an existing origin branch." })), apply, context, reuseExisting: Type.Optional(Type.Boolean()), ...safety }),
 		async execute(_id, params, _signal, _onUpdate, ctx) {
 			const result = await withFileMutationQueue(BENCH_STATE_DIR, () => startBranchBench(params.branch, { ...params, currentWorkingDirectory: ctx?.cwd ?? process.cwd() }));
@@ -47,6 +51,7 @@ export function registerGeneralBenchTools(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerTool({
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		name: "maglev_bench_close", label: "Maglev Bench Close", description: "Plan or execute closing any Maglev Bench. Protects dirty/ignored files, local-only commits across live refs (including HEAD/stash), and unknown preservation state. Remote-ref checks use locally cached refs, not a fetch.",
 		promptGuidelines: ["Inspect first. Dry-run by default. Show warnings and obtain explicit acknowledgement before discarding files or committed work. Set removeCheckout false to stop tmux while preserving the checkout and artifacts."],
 		parameters: Type.Object({ id, apply, allowDirty, allowStale: Type.Optional(Type.Boolean()), allowLocalCommits: Type.Optional(Type.Boolean({ description: "Explicitly acknowledge losing committed work or unverified preservation." })), closeTmux: Type.Optional(Type.Boolean()), removeCheckout: Type.Optional(Type.Boolean()) }),
@@ -56,6 +61,7 @@ export function registerGeneralBenchTools(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerTool({
+		namespace: MAGLEV_TOOL_NAMESPACE,
 		name: "maglev_bench_associate_pr", label: "Associate Bench PR", description: "Associate an existing Maglev branch Bench with a matching PR from the local snapshot. Preserves identity, checkout, tmux, Pi, and artifacts; does not start review or modify an active session.",
 		promptGuidelines: ["Check snapshot staleness and refresh when needed before association. Dry-run by default; apply only on explicit request. PR must have the same head repository and branch, and cannot already have another Bench."],
 		parameters: Type.Object({ id, pr: Type.Integer({ minimum: 1 }), apply, ...safety }),
