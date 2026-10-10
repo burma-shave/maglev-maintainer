@@ -41,8 +41,15 @@ Checkout, session, and artifacts remain unchanged; PR resolution follows the man
 `bench-core.ts` plans/executes the common lifecycle. PR checkout/fork handling, head
 comparison, and reset are PR-specific additions. `bench.ts` provides shared discovery
 and lifecycle operations plus PR compatibility views. `bench-tools.ts` registers
-`maglev_bench_list`, `inspect`, `start`, `close`, and `associate_pr` (each with the
-`maglev_bench_` prefix). Existing PR tools are adapters over those domain operations.
+`maglev_bench_list`, `resolve_pr`, `inspect`, `start`, `reset`, `close`, and
+`associate_pr` (each with the `maglev_bench_` prefix). Duplicate PR lifecycle
+registrations are removed; internal PR views remain for queue/review consumers.
+
+Start takes exactly one of branch or PR number and returns the planned/applied ID.
+Resolution maps only existing PR associations to an ID (including legacy discovery)
+and returns null when absent; it never creates a Bench or fabricates an identity.
+Inspect, close, and reset take only stable IDs. Reset requires a PR association
+and uses that PR's snapshot head. Conflicting local associations fail closed.
 
 Branch start opens an existing origin branch, or explicitly creates a branch from
 `createFrom` without tracking its base. Unassociated branches do not depend on
@@ -51,7 +58,8 @@ is background only, passed via `--append-system-prompt` when launching a new Pi
 window; it never triggers a task/review or modifies an existing Pi session.
 
 General commands `/maglev-benches`, `/maglev-bench-start`, `/maglev-bench-inspect`,
-`/maglev-bench-close`, and `/maglev-bench-associate-pr` default to plans for mutations;
+`/maglev-bench-close`, `/maglev-bench-reset`, `/maglev-bench-resolve-pr`, and
+`/maglev-bench-associate-pr` default to plans for mutations;
 `--apply` authorizes execution. Commands and tools share mutation serialization.
 Workspace context, runtime identity, and PR review artifact paths retain the Bench
 ID across association.
@@ -109,13 +117,17 @@ GitHub/state/context tools:
 - `maglev_pr_review_draft_save`, `maglev_pr_review_draft_clear`, `maglev_pr_review_draft_list`, `maglev_pr_review_draft_load`: create/replace, clear, locate, and read centralized prospective drafts. The writer validates inline locations against the live PR diff, not finding correctness; no submission is performed.
 - `maglev_api_runtime_start`, `maglev_api_runtime_stop`, `maglev_api_runtime_status`: isolated Maglev/legacy Docker runtime lifecycle; start/stop default to plans, status is read-only.
 
-PR Bench tools:
+Unified Bench tools:
 
-- `maglev_pr_bench_list` (implemented read-only)
-- `maglev_pr_bench_inspect` (implemented read-only)
-- `maglev_pr_bench_start` (dry-run by default; uses plain checkouts and `gh pr checkout`; can complete safe partial PR Benches)
-- `maglev_pr_bench_reset` (implemented; dry-run by default, forced checkout to snapshot PR head; dirty-state acknowledgement required)
-- `maglev_pr_bench_close` (implemented; dry-run by default, executes only with explicit `apply` when the plan is ready)
+- `maglev_bench_list` (read-only; optional ID or PR filters)
+- `maglev_bench_resolve_pr` (read-only existing PR-to-ID mapping)
+- `maglev_bench_inspect` (read-only stable-ID inspection)
+- `maglev_bench_start` (branch or PR entry point; dry-run by default, returns ID)
+- `maglev_bench_reset` (stable ID; associated PR snapshot target, dry-run by default)
+- `maglev_bench_close` (stable ID; dry-run by default, explicit apply/acknowledgements)
+- `maglev_bench_associate_pr` (stable ID plus matching PR; identity-preserving)
+
+PR-facing review tools remain separate:
 - `maglev_pr_review_instructions_load` (explicit on-demand instructions/context for the calling agent, never automatic)
 - `maglev_pr_code_review` (headless Claude Code `/code-review` plus captured logs; PR-number-only remote review by default, optional explicit checkout; no Bench lookup)
 
@@ -163,16 +175,23 @@ Dirty state should be more specific than a boolean:
 
 The tool API remains deterministic and non-interactive. It defaults to dry-run and returns planned actions, findings, unacknowledged warnings, and refusals. Options such as `allowDirty: "untracked" | "any"` and `allowStale: true` acknowledge file/PR-head warnings. Cleanup also checks all live local refs (including HEAD, other branches/stash) against cached remote refs, and warns for local-only commits or unverifiable preservation. Reflog-only history is excluded, so old remote tips after force-pushes do not appear as local work. A deleted/missing upstream is safe when all live local commits remain reachable from remote refs. Callers should fetch/prune before cleanup and re-inspect; read-only inspection itself never fetches. `allowLocalCommits: true` is a separate explicit acknowledgement; file/PR-head overrides never bypass it. Ignored files require `allowDirty: "any"`. `removeCheckout: false` preserves work and artifacts and needs no work-loss overrides. Deletion rechecks local state after stopping Pi. Cached remote refs are not live proof of remote preservation; callers should push or otherwise preserve work before deletion. `apply: true` executes only when there are no refusals and all warnings are acknowledged.
 
-The implemented PR command/UI flow is interactive on top of the same planner: show the plan and warnings, then offer same-flow choices such as cancel, dry-run report, close while discarding untracked files, or close anyway. Untracked-only files are a warning with an easy override; modified/staged/conflicted files get stronger copy but can still be explicitly overridden unless a separate refusal is present.
+Unified commands use explicit plan/apply flags over the same planner instead of
+the retired PR-specific interactive confirmation menus. `--apply` authorizes a
+mutation; separate file, HEAD/snapshot, and committed-work flags acknowledge
+warnings. Refusals cannot be overridden. Reset remains subject to F1: preserve
+displaced unpushed commits first.
 
 Commands:
 
 - `/maglev-prs` (implemented read-only queue report, optional PR-number filters; TUI-only custom entry, not model context)
-- `/maglev-pr-benches` (implemented read-only PR Bench report, optional PR-number filters; TUI-only custom entry, not model context)
+- `/maglev-benches` (read-only list of all Benches)
+- `/maglev-bench-resolve-pr` (read-only PR-to-ID resolution)
+- `/maglev-bench-inspect` (stable-ID inspection)
+- `/maglev-bench-associate-pr` (stable-ID association, explicit apply)
 - `/maglev-maintainer-status` (implemented status summary for root writability, snapshot, decisions, PR Benches, `gh`, and `tmux` availability)
-- `/maglev-pr-bench-start` (implemented interactive start flow over the same planner)
-- `/maglev-pr-bench-reset` (implemented interactive reset flow over the same planner)
-- `/maglev-pr-bench-close` (implemented interactive close flow over the same planner)
+- `/maglev-bench-start` (branch or `--pr` entry point, plan by default)
+- `/maglev-bench-reset` (stable-ID reset, plan by default)
+- `/maglev-bench-close` (stable-ID closure, plan by default)
 - `/maglev-pr-review-draft` (implemented read-only scrollable draft viewer with discussion handoff)
 - `/maglev-maintainer-info` (implemented resource/path summary)
 
@@ -181,8 +200,8 @@ Commands:
 The current TUI is a deterministic client of the same functions/tools:
 
 - `/maglev-prs` joins snapshot + decisions + PR Bench status as a read-only transcript report. Its TRIAGE group uses the shared stale/missing-decision calculation, not an interactive tab.
-- `/maglev-pr-benches` is a read-only transcript report; both reports support PR filters and use display-only custom entries, not canonical state or model-visible facts.
-- PR lifecycle confirmation flows use the same planners, and draft viewing is read-only.
+- `/maglev-benches` lists all local Benches; the queue report remains display-only, not canonical state or model-visible facts.
+- Unified lifecycle commands use the same planners and explicit apply/override flags; draft viewing is read-only.
 - Freshness checks use the shared snapshot staleness constant/tools.
 
 **Planned, not implemented:** a queue refresh key invoking metadata refresh, an
@@ -194,7 +213,7 @@ Use metadata/decision tools and skills for those operations today.
 Skills orchestrate policy and inference using deterministic tools:
 
 - Triage keeps the parent on compact discovery/decision results, delegates one PR per fresh-context analyst, and lets that child load its assigned PR facts. The parent owns ordering, acceptance, and serialized decision persistence. Focused parent inspection of a deliberately selected PR remains supported.
-- The single `maglev-bench` skill owns branch and PR lifecycle, not review policy; it does not call legacy helper scripts. PR-number tools and commands remain adapters over the same Bench model.
+- The single `maglev-bench` skill owns branch and PR lifecycle, not review policy; it does not call legacy helper scripts. PR numbers are entry points for start and read-only resolution; subsequent lifecycle operations use stable IDs.
 - `maglev-pr-code-review` runs Claude Code and focused validation; a standalone request does not mutate drafts. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. The current explicit kickoff composes these two; it is not triggered by Bench startup.
 - OBA API/spec skills provide a distinct behavior/client/spec review and may hand settled findings to the shared draft skill when requested. They resolve companion repos through the package tools, not hard-coded sibling paths or shell resolver scripts.
 - `maglev-artifacts` organizes working artifacts and delegates tool-owned state or generated-script mutations to their dedicated tools/skills. It places maintainer working reports/handoffs in the applicable `artifacts.targetReportsDir` for PR or branch Benches; without an applicable Bench, use `<maintainerRoot>/plans/`. Association preserves paths, and explicit destinations take precedence. Never default to checkout-local `tmp/`.

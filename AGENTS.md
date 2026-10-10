@@ -44,8 +44,11 @@ must name the repository explicitly.
   kickoff. Optional `context` is background via `--append-system-prompt`, only
   when launching a new Pi window; existing sessions are not modified.
 
-Use Bench terminology, not “worktree,” as the primary workflow name. General
-`maglev_bench_*` tools and PR-specialized tools share the lifecycle implementation.
+Use Bench terminology, not “worktree,” as the primary workflow name. The single
+`maglev_bench_*` lifecycle API starts by branch or PR and returns a stable ID.
+Resolve existing PR associations with `maglev_bench_resolve_pr`; inspect, close,
+and reset take only that ID. Reset requires a PR association. Duplicate PR
+lifecycle tools/commands are not registered; PR review and metadata remain PR-facing.
 
 Start, reset, association, and close tools default to plans. Apply only on an
 explicit request. Inspect first, show warnings, and preserve identity/path
@@ -165,9 +168,10 @@ syntax validation never authorize executing the script or publishing to GitHub.
 
 ## Current UI versus planned UI
 
-`/maglev-prs` and `/maglev-pr-benches` are read-only transcript reports with optional
-PR filters, not interactive refresh/marking/tab queues. The review JSON viewer and
-PR lifecycle confirmation flows are implemented. A queue refresh key, TRIAGE tab,
+`/maglev-prs` is a read-only transcript report with optional PR filters, not an
+interactive refresh/marking/tab queue. `/maglev-benches` lists all local Benches.
+The review JSON viewer is implemented. Unified Bench lifecycle commands default
+to plans and require `--apply` plus any explicit warning-acknowledgement flags. A queue refresh key, TRIAGE tab,
 and manual marking UI remain planned; use tools/skills for those operations now.
 
 ## Testing and isolated development

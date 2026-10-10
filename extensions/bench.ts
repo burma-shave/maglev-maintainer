@@ -149,10 +149,19 @@ export async function inspectBench(pr: number): Promise<{ bench: BenchState | nu
 	const result = await collectBenchStates({ prs: [pr] });
 	return { bench: result.benches.find((item) => item.pr === pr) ?? null, snapshotWarning: result.snapshotWarning };
 }
+/** Resolve existing local identity only; never invent pr-N for a missing Bench. */
+export async function resolveBenchPr(pr: number) {
+	if (!Number.isSafeInteger(pr) || pr < 1) throw new Error("Invalid PR number.");
+	const { bench } = await inspectBench(pr);
+	return { pr, id: bench?.id ?? null, found: bench !== null };
+}
+
 export async function inspectGeneralBench(id: string) {
 	if (!validBenchId(id)) throw new Error("Invalid bench ID.");
-	const result = await collectAllBenchStates({ ids: [id] });
-	return { bench: result.benches[0] ?? null, snapshotWarning: result.snapshotWarning };
+	// Check all local identities so an ID lookup cannot hide a conflicting legacy
+	// PR checkout alongside an associated branch Bench.
+	const result = await collectAllBenchStates();
+	return { bench: result.benches.find((bench) => bench.id === id) ?? null, snapshotWarning: result.snapshotWarning };
 }
 async function pathExists(path: string): Promise<boolean> {
 	try { await lstat(path); return true; }
@@ -199,6 +208,30 @@ async function startTarget(target: BenchDefinition, options: BenchStartOptions =
 	}
 }
 
+export interface BenchStartTarget {
+	branch?: string;
+	pr?: number;
+	createFrom?: string;
+}
+
+export function validateBenchStartTarget(input: BenchStartTarget): void {
+	if ((input.branch !== undefined) === (input.pr !== undefined)) throw new Error("Specify exactly one of branch or pr.");
+	if (input.pr !== undefined) {
+		if (!Number.isSafeInteger(input.pr) || input.pr < 1) throw new Error("Invalid PR number.");
+		if (input.createFrom !== undefined) throw new Error("createFrom is only supported with branch.");
+	} else {
+		branchBenchDefinition(input.branch!, input.createFrom);
+	}
+}
+
+export async function startGeneralBench(input: BenchStartTarget, options: BenchStartOptions = {}): Promise<BenchStartResult & { id: string }> {
+	validateBenchStartTarget(input);
+	const result = input.pr !== undefined
+		? await startBench(input.pr, options)
+		: await startBranchBench(input.branch!, { ...options, createFrom: input.createFrom });
+	return { id: result.plan.target.id, ...result };
+}
+
 export async function startBranchBench(branch: string, options: BenchStartOptions & { createFrom?: string } = {}): Promise<BenchStartResult> {
 	const requested = branchBenchDefinition(branch, options.createFrom);
 	const targets = await loadBenchDefinitions();
@@ -234,13 +267,26 @@ export async function associateBenchPr(id: string, pr: number, options: BenchSta
 	return { plan, snapshotWarning, applied, executed: applied ? plan.actions : [] };
 }
 
+/** Internal PR compatibility adapter; public reset is stable-ID based. */
 export async function resetBench(pr: number, options: BenchResetOptions = {}): Promise<BenchResetResult> {
-	const [{ snapshot, warning: snapshotWarning }, benchResult] = await Promise.all([loadSnapshotOptional(), inspectBench(pr)]);
-	const snapshotPr = snapshot?.pullRequests.find((item) => item.number === pr);
-	const plan = planBenchReset(benchResult.bench, snapshotPr, snapshot?.fetchedAt, { ...options, requestedPr: pr, currentWorkingDirectory: options.currentWorkingDirectory ?? process.cwd(), apply: options.apply ?? false });
-	const common = { plan, snapshotWarning: snapshotWarning ?? benchResult.snapshotWarning };
+	const result = await resolveBenchPr(pr);
+	return resetGeneralBench(result.id ?? prBenchDefinition(pr).id, options);
+}
+
+export async function resetGeneralBench(id: string, options: BenchResetOptions = {}): Promise<BenchResetResult & { id: string }> {
+	const [{ snapshot, warning: snapshotWarning }, benchResult] = await Promise.all([loadSnapshotOptional(), inspectGeneralBench(id)]);
+	const bench = benchResult.bench;
+	const associated = bench?.pr !== undefined ? bench as BenchState : null;
+	const snapshotPr = snapshot?.pullRequests.find((pr) => pr.number === associated?.pr);
+	const plan = planBenchReset(associated, snapshotPr, snapshot?.fetchedAt, { ...options, requestedPr: associated?.pr, currentWorkingDirectory: options.currentWorkingDirectory ?? process.cwd(), apply: options.apply ?? false });
+	if (bench && !associated) {
+		const refusal = { severity: "refusal" as const, code: "pr-association-required", message: "Reset requires a PR association to identify the snapshot target." };
+		plan.findings = [refusal]; plan.refusals = [refusal]; plan.status = "refused";
+		plan.benchPath = bench.benchPath; plan.branchName = bench.branchName;
+	}
+	const common = { id, plan, snapshotWarning: associated ? snapshotWarning ?? benchResult.snapshotWarning : undefined };
 	if (!options.apply || plan.status !== "ready") return { ...common, applied: false, executed: [] };
-	try { return { ...common, applied: true, executed: await executeBenchReset(benchResult.bench, snapshotPr, plan, { runText, commandSucceeds }) }; }
+	try { return { ...common, applied: true, executed: await executeBenchReset(associated, snapshotPr, plan, { runText, commandSucceeds }) }; }
 	catch (err) { return { ...common, applied: false, executed: err instanceof BenchStartExecutionError ? err.executed : [], mutationWarning: err instanceof Error ? err.message : String(err) }; }
 }
 

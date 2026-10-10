@@ -7,12 +7,12 @@ import { registerGeneralBenchTools } from "./bench-tools.ts";
 import { loadBenchDefinitions } from "./bench-registry.ts";
 import { type ExtensionAPI, type ExtensionCommandContext, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Box, matchesKey, Text, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { closeBench as closePrBench, collectAllBenchStates, formatBenchClosePlan, formatBenchLine, formatBenchReportLines, formatBenchResetPlan, formatBenchStartPlan, formatBenchStartVerification, inspectBench, listBenches, parseBenchCommandArgs, resetBench as resetPrBench, startBench as startPrBench } from "./bench.ts";
+import { collectAllBenchStates, inspectBench, listBenches } from "./bench.ts";
 import { loadBenchKickoff } from "./bench-kickoff.ts";
 import { deleteDecision, getDecision, listDecisions, saveDecision } from "./decisions.ts";
 import { refreshMetadata } from "./github.ts";
 import { buildQueueModel, formatQueueReportLines, queueCounts } from "./queue-core.ts";
-import { BenchCloseParamsSchema, BenchInspectParamsSchema, BenchKickoffParamsSchema, BenchListParamsSchema, BenchResetParamsSchema, BenchStartParamsSchema, CodeReviewParamsSchema, CompanionReposParamsSchema, DecisionsParamsSchema, LoadMetadataParamsSchema, MaglevCheckoutParamsSchema, NeedsInferenceParamsSchema, RefreshMetadataParamsSchema, ReviewJsonClearParamsSchema, ReviewJsonListParamsSchema, ReviewJsonLoadParamsSchema, ReviewJsonParamsSchema, SnapshotStalenessParamsSchema, StateQueryParamsSchema, WorkspaceContextParamsSchema } from "./schemas.ts";
+import { BenchKickoffParamsSchema, CodeReviewParamsSchema, CompanionReposParamsSchema, DecisionsParamsSchema, LoadMetadataParamsSchema, MaglevCheckoutParamsSchema, NeedsInferenceParamsSchema, RefreshMetadataParamsSchema, ReviewJsonClearParamsSchema, ReviewJsonListParamsSchema, ReviewJsonLoadParamsSchema, ReviewJsonParamsSchema, SnapshotStalenessParamsSchema, StateQueryParamsSchema, WorkspaceContextParamsSchema } from "./schemas.ts";
 import { BENCH_CHECKOUTS_DIR, BENCH_STATE_DIR, COMPANION_REPOS_DIR, DECISIONS_FILE, MAINTAINER_ROOT, REVIEW_JSON_DIR, SNAPSHOT_FILE, STATE_DIR } from "./paths.ts";
 import { loadDecisions, loadSnapshot, loadSnapshotOptional, writeDecisions } from "./state.ts";
 import { writeReviewJson } from "./review-json.ts";
@@ -27,11 +27,6 @@ import { buildWorkspaceContext, formatWorkspaceContext } from "./workspace-conte
 import { formatCompanionReposReport, resolveCompanionRepos } from "./companion-repos.ts";
 import { formatCodeReviewResult, runClaudeCodeReview } from "./code-review.ts";
 
-// Every branch/PR mutation uses the same registry queue, including TUI clients.
-const startBench = (...args: Parameters<typeof startPrBench>) => withFileMutationQueue(BENCH_STATE_DIR, () => startPrBench(...args));
-const closeBench = (...args: Parameters<typeof closePrBench>) => withFileMutationQueue(BENCH_STATE_DIR, () => closePrBench(...args));
-const resetBench = (...args: Parameters<typeof resetPrBench>) => withFileMutationQueue(BENCH_STATE_DIR, () => resetPrBench(...args));
-
 interface MaglevReportEntryData {
 	lines: string[];
 	generatedAt: string;
@@ -41,69 +36,6 @@ function renderReportEntry(lines: string[], theme: { bg: (color: "customMessageB
 	const box = new Box(1, 1, (text) => theme.bg("customMessageBg", text));
 	box.addChild(new Text(lines.join("\n"), 0, 0));
 	return box;
-}
-
-function parseSinglePrCommandArgs(args: string, command: string): { pr?: number; dryRun: boolean; error?: string } {
-	const tokens = args.trim().split(/\s+/).filter(Boolean);
-	const dryRun = tokens.some((token) => token === "--dry-run" || token === "--plan");
-	const prTokens = tokens.filter((token) => token !== "--dry-run" && token !== "--plan");
-	if (prTokens.length !== 1) return { dryRun, error: `Usage: /${command} <PR number> [--dry-run]` };
-	const normalized = prTokens[0]!.replace(/^#/, "");
-	if (!/^\d+$/.test(normalized)) return { dryRun, error: `Invalid PR number argument: ${prTokens[0]}` };
-	return { pr: Number(normalized), dryRun };
-}
-
-function closeOverrideOptions(plan: { unacknowledgedWarnings: Array<{ code: string }> }) {
-	const hasStale = plan.unacknowledgedWarnings.some((warning) => warning.code === "stale-head");
-	const allowLocalCommits = plan.unacknowledgedWarnings.some((warning) => warning.code === "local-commits");
-	const ignoredFiles = plan.unacknowledgedWarnings.some((warning) => warning.code === "ignored-files");
-	const dirtyWarnings = plan.unacknowledgedWarnings.filter((warning) => warning.code.startsWith("dirty-"));
-	const allowDirty = ignoredFiles ? "any" : dirtyWarnings.length === 0 ? "none" : dirtyWarnings.every((warning) => warning.code === "dirty-untracked-only") ? "untracked" : "any";
-	const labels = [
-		allowDirty === "untracked" ? "discard untracked files" : undefined,
-		allowDirty === "any" ? "discard all local and ignored files" : undefined,
-		allowLocalCommits ? "discard local-only or unverified committed work" : undefined,
-		hasStale ? "accept stale local HEAD" : undefined,
-	].filter(Boolean);
-	return { allowDirty, allowStale: hasStale, allowLocalCommits, label: labels.length ? labels.join(" + ") : "acknowledge warnings" };
-}
-
-function resetOverrideOptions(plan: { unacknowledgedWarnings: Array<{ code: string }> }) {
-	const staleSnapshot = plan.unacknowledgedWarnings.some((warning) => warning.code === "stale-snapshot" || warning.code === "missing-snapshot-head");
-	const dirtyWarnings = plan.unacknowledgedWarnings.filter((warning) => warning.code.startsWith("dirty-"));
-	const allowDirty = dirtyWarnings.length === 0 ? "none" : dirtyWarnings.every((warning) => warning.code === "dirty-untracked-only") ? "untracked" : "any";
-	const labels = [
-		allowDirty === "untracked" ? "discard untracked files" : undefined,
-		allowDirty === "any" ? "discard all local changes" : undefined,
-		staleSnapshot ? "stale/incomplete snapshot" : undefined,
-	].filter(Boolean);
-	return { allowDirty, allowStaleSnapshot: staleSnapshot, label: labels.length ? labels.join(" + ") : "acknowledge warnings" };
-}
-
-function startOverrideOptions(plan: { unacknowledgedWarnings: Array<{ code: string }> }) {
-	const codes = new Set(plan.unacknowledgedWarnings.map((warning) => warning.code));
-	const options = {
-
-		allowStaleSnapshot: codes.has("stale-snapshot") || codes.has("missing-snapshot-head") || codes.has("missing-pr-head-repository"),
-		allowHeadMismatch: codes.has("head-mismatch"),
-	};
-	const labels = [
-
-		options.allowStaleSnapshot ? "stale/incomplete snapshot" : undefined,
-		options.allowHeadMismatch ? "head mismatch" : undefined,
-	].filter(Boolean);
-	return { ...options, label: labels.length ? labels.join(" + ") : "acknowledge warnings" };
-}
-
-function startReportLines(result: Awaited<ReturnType<typeof startBench>>): string[] {
-	const lines = formatBenchStartPlan(result.plan);
-	if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
-	else if (result.plan.apply) lines.push("Not applied.");
-	if (result.contextPath) lines.push(`Caller context: ${result.contextPath}`);
-	if (result.verification) lines.push(...formatBenchStartVerification(result.verification));
-	if (result.snapshotWarning) lines.push(`Snapshot unavailable or incomplete: ${result.snapshotWarning}`);
-	if (result.mutationWarning) lines.push(result.mutationWarning);
-	return lines;
 }
 
 function formatMaintainerStatus(status: MaintainerStatus): string {
@@ -187,6 +119,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	registerApiRuntimeTools(pi);
 	registerGeneralBenchTools(pi);
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-queue-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["Maglev PR queue report unavailable."], theme));
+	// Retain renderers for historical transcript entries, not retired commands.
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-benches-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["PR Benches report unavailable."], theme));
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-bench-start-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["PR Bench start report unavailable."], theme));
 	pi.registerEntryRenderer<MaglevReportEntryData>("maglev-pr-bench-reset-report", (entry, _options, theme) => renderReportEntry(entry.data?.lines ?? ["PR Bench reset report unavailable."], theme));
@@ -195,7 +128,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	pi.registerCommand(INFO_COMMAND, {
 		description: `Show info for the in-development ${DISPLAY_NAME} package`,
 		handler: async (_args, ctx) => {
-			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-prs, /maglev-pr-benches, /maglev-pr-bench-start, /maglev-pr-bench-reset, /maglev-pr-bench-close, /maglev-pr-review-draft, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_workspace_context, maglev_checkout, maglev_companion_repos_resolve, maglev_api_runtime_start, maglev_api_runtime_stop, maglev_api_runtime_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_pr_bench_list, maglev_pr_bench_inspect, maglev_pr_review_instructions_load, maglev_pr_code_review, maglev_pr_bench_start, maglev_pr_bench_reset, maglev_pr_bench_close, maglev_pr_review_draft_save, maglev_pr_review_draft_clear, maglev_pr_review_draft_list, maglev_pr_review_draft_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
+			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-bench-resolve-pr, /maglev-bench-reset, /maglev-prs, /maglev-pr-review-draft, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_workspace_context, maglev_checkout, maglev_companion_repos_resolve, maglev_api_runtime_start, maglev_api_runtime_stop, maglev_api_runtime_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_bench_resolve_pr, maglev_bench_reset, maglev_pr_review_instructions_load, maglev_pr_code_review, maglev_pr_review_draft_save, maglev_pr_review_draft_clear, maglev_pr_review_draft_list, maglev_pr_review_draft_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
 		},
 	});
 
@@ -284,196 +217,6 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 			const counts = queueCounts(model);
 			const warning = benchResult.snapshotWarning ? ` Snapshot freshness unavailable for PR Benches: ${benchResult.snapshotWarning}` : "";
 			ctx.ui.notify(`Printed Maglev PR queue: TRIAGE ${counts.triage}, REVIEW ${counts.review}, CHASE ${counts.chase}, PINNED ${counts.pinned}, WATCH ${counts.watch}, BENCH ${counts.bench}.${warning}`, benchResult.snapshotWarning ? "warning" : "info");
-		},
-	});
-
-	pi.registerCommand("maglev-pr-benches", {
-		description: "Print a read-only local Maglev PR Benches report. Optional args: PR numbers.",
-		handler: async (args, ctx) => {
-			const parsed = parseBenchCommandArgs(args ?? "");
-			if (parsed.error) {
-				ctx.ui.notify(parsed.error, "error");
-				return;
-			}
-			if (parsed.clear) {
-				ctx.ui.notify("/maglev-pr-benches no longer uses a persistent widget, so there is nothing to clear.", "info");
-				return;
-			}
-			const { benches, snapshotWarning } = await listBenches({ prs: parsed.prs });
-			const lines = formatBenchReportLines(benches, snapshotWarning);
-			pi.appendEntry<MaglevReportEntryData>("maglev-pr-benches-report", { lines, generatedAt: new Date().toISOString() });
-			ctx.ui.notify(`Printed ${benches.length} local PR Bench${benches.length === 1 ? "" : "es"}.`, snapshotWarning ? "warning" : "info");
-		},
-	});
-
-	pi.registerCommand("maglev-pr-bench-start", {
-		description: "Interactively start a local PR Bench. Usage: /maglev-pr-bench-start <PR number> [--dry-run]",
-		handler: async (args, ctx) => {
-			const parsed = parseSinglePrCommandArgs(args ?? "", "maglev-pr-bench-start");
-			if (parsed.error || !parsed.pr) {
-				ctx.ui.notify(parsed.error ?? "A PR number is required.", "error");
-				return;
-			}
-			const initial = await startBench(parsed.pr, { apply: false });
-			const initialLines = startReportLines(initial);
-			if (parsed.dryRun || initial.plan.status === "refused" || initial.plan.status === "reusable" || !ctx.hasUI) {
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-start-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-				const level = initial.plan.status === "refused" ? "error" : initial.plan.status === "ready" || initial.plan.status === "reusable" ? "info" : "warning";
-				const message = initial.plan.status === "refused"
-					? `Cannot start PR Bench #${parsed.pr}; see report.`
-					: initial.plan.status === "reusable"
-						? `PR Bench #${parsed.pr} already exists and can be reused; see report.`
-						: `Printed PR Bench #${parsed.pr} start plan.`;
-				ctx.ui.notify(message, level);
-				return;
-			}
-
-			const override = startOverrideOptions(initial.plan);
-			const startChoice = initial.plan.status === "ready"
-				? `Start PR Bench #${parsed.pr}`
-				: `Start PR Bench #${parsed.pr} (${override.label})`;
-			const reportChoice = "Print dry-run report";
-			const cancelChoice = "Cancel";
-			const choice = await ctx.ui.select(initialLines.join("\n"), [
-				cancelChoice,
-				reportChoice,
-				startChoice,
-			]);
-			if (choice !== startChoice) {
-				if (choice === reportChoice) {
-					pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-start-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-					ctx.ui.notify(`Printed PR Bench #${parsed.pr} start plan.`, initial.plan.status === "ready" ? "info" : "warning");
-				} else {
-					ctx.ui.notify(`Cancelled starting PR Bench #${parsed.pr}.`, "info");
-				}
-				return;
-			}
-
-			try {
-				const result = await startBench(parsed.pr, {
-					apply: true,
-					...(initial.plan.status === "ready" ? {} : override),
-				});
-				const lines = startReportLines(result);
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-start-report", { lines, generatedAt: new Date().toISOString() });
-				ctx.ui.notify(result.applied ? `Started PR Bench #${parsed.pr}.` : `Did not start PR Bench #${parsed.pr}; see report.`, result.applied ? "info" : "warning");
-			} catch (err) {
-				ctx.ui.notify(`Failed to start PR Bench #${parsed.pr}: ${err instanceof Error ? err.message : String(err)}`, "error");
-			}
-		},
-	});
-
-	pi.registerCommand("maglev-pr-bench-reset", {
-		description: "Interactively reset an existing local PR Bench checkout to the snapshot PR head. Usage: /maglev-pr-bench-reset <PR number> [--dry-run]",
-		handler: async (args, ctx) => {
-			const parsed = parseSinglePrCommandArgs(args ?? "", "maglev-pr-bench-reset");
-			if (parsed.error || !parsed.pr) {
-				ctx.ui.notify(parsed.error ?? "A PR number is required.", "error");
-				return;
-			}
-			const initial = await resetBench(parsed.pr, { apply: false });
-			const initialLines = formatBenchResetPlan(initial.plan);
-			if (initial.snapshotWarning) initialLines.push(`Snapshot freshness unavailable: ${initial.snapshotWarning}`);
-			if (parsed.dryRun || initial.plan.status === "refused" || !ctx.hasUI) {
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-reset-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-				ctx.ui.notify(initial.plan.status === "refused" ? `Cannot reset PR Bench #${parsed.pr}; see report.` : `Printed PR Bench #${parsed.pr} reset plan.`, initial.plan.status === "ready" ? "info" : initial.plan.status === "refused" ? "error" : "warning");
-				return;
-			}
-
-			const override = resetOverrideOptions(initial.plan);
-			const resetChoice = initial.plan.status === "ready"
-				? `Reset PR Bench #${parsed.pr}`
-				: `Reset PR Bench #${parsed.pr} (${override.label})`;
-			const reportChoice = "Print dry-run report";
-			const cancelChoice = "Cancel";
-			const choice = await ctx.ui.select(initialLines.join("\n"), [
-				cancelChoice,
-				reportChoice,
-				resetChoice,
-			]);
-			if (choice !== resetChoice) {
-				if (choice === reportChoice) {
-					pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-reset-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-					ctx.ui.notify(`Printed PR Bench #${parsed.pr} reset plan.`, initial.plan.status === "ready" ? "info" : "warning");
-				} else {
-					ctx.ui.notify(`Cancelled resetting PR Bench #${parsed.pr}.`, "info");
-				}
-				return;
-			}
-
-			try {
-				const result = await resetBench(parsed.pr, {
-					apply: true,
-					allowDirty: initial.plan.status === "ready" ? "none" : override.allowDirty,
-					allowStaleSnapshot: initial.plan.status === "ready" ? false : override.allowStaleSnapshot,
-				});
-				const lines = formatBenchResetPlan(result.plan);
-				if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
-				else lines.push("Not applied because the plan was no longer ready.");
-				if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
-				if (result.mutationWarning) lines.push(result.mutationWarning);
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-reset-report", { lines, generatedAt: new Date().toISOString() });
-				ctx.ui.notify(result.applied ? `Reset PR Bench #${parsed.pr}.` : `Did not reset PR Bench #${parsed.pr}; see report.`, result.applied ? "info" : "warning");
-			} catch (err) {
-				ctx.ui.notify(`Failed to reset PR Bench #${parsed.pr}: ${err instanceof Error ? err.message : String(err)}`, "error");
-			}
-		},
-	});
-
-	pi.registerCommand("maglev-pr-bench-close", {
-		description: "Interactively close a local PR Bench. Usage: /maglev-pr-bench-close <PR number> [--dry-run]",
-		handler: async (args, ctx) => {
-			const parsed = parseSinglePrCommandArgs(args ?? "", "maglev-pr-bench-close");
-			if (parsed.error || !parsed.pr) {
-				ctx.ui.notify(parsed.error ?? "A PR number is required.", "error");
-				return;
-			}
-			const initial = await closeBench(parsed.pr, { apply: false });
-			const initialLines = formatBenchClosePlan(initial.plan);
-			if (initial.snapshotWarning) initialLines.push(`Snapshot freshness unavailable: ${initial.snapshotWarning}`);
-			if (parsed.dryRun || initial.plan.status === "refused" || !ctx.hasUI) {
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-close-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-				ctx.ui.notify(initial.plan.status === "refused" ? `Cannot close PR Bench #${parsed.pr}; see report.` : `Printed PR Bench #${parsed.pr} close plan.`, initial.plan.status === "ready" ? "info" : initial.plan.status === "refused" ? "error" : "warning");
-				return;
-			}
-
-			const override = closeOverrideOptions(initial.plan);
-			const closeChoice = initial.plan.status === "ready"
-				? `Close PR Bench #${parsed.pr}`
-				: `Close PR Bench #${parsed.pr} (${override.label})`;
-			const reportChoice = "Print dry-run report";
-			const cancelChoice = "Cancel";
-			const choice = await ctx.ui.select(initialLines.join("\n"), [
-				cancelChoice,
-				reportChoice,
-				closeChoice,
-			]);
-			if (choice !== closeChoice) {
-				if (choice === reportChoice) {
-					pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-close-report", { lines: initialLines, generatedAt: new Date().toISOString() });
-					ctx.ui.notify(`Printed PR Bench #${parsed.pr} close plan.`, initial.plan.status === "ready" ? "info" : "warning");
-				} else {
-					ctx.ui.notify(`Cancelled closing PR Bench #${parsed.pr}.`, "info");
-				}
-				return;
-			}
-
-			try {
-				const result = await closeBench(parsed.pr, {
-					apply: true,
-					allowDirty: initial.plan.status === "ready" ? "none" : override.allowDirty,
-					allowStale: initial.plan.status === "ready" ? false : override.allowStale,
-					allowLocalCommits: initial.plan.status === "ready" ? false : override.allowLocalCommits,
-				});
-				const lines = formatBenchClosePlan(result.plan);
-				if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
-				else lines.push("Not applied because the plan was no longer ready.");
-				if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
-				pi.appendEntry<MaglevReportEntryData>("maglev-pr-bench-close-report", { lines, generatedAt: new Date().toISOString() });
-				ctx.ui.notify(result.applied ? `Closed PR Bench #${parsed.pr}.` : `Did not close PR Bench #${parsed.pr}; see report.`, result.applied ? "info" : "warning");
-			} catch (err) {
-				ctx.ui.notify(`Failed to close PR Bench #${parsed.pr}: ${err instanceof Error ? err.message : String(err)}`, "error");
-			}
 		},
 	});
 
@@ -645,44 +388,6 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "maglev_pr_bench_list",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Bench List",
-		description: "List active/local Maglev PR Benches without mutating state.",
-		promptSnippet: "List local PR Benches for OneBusAway/maglev.",
-		promptGuidelines: ["Use maglev_pr_bench_list before summarizing active local PR Benches; this tool does not mutate state."],
-		parameters: BenchListParamsSchema,
-		async execute(_toolCallId, params) {
-			const { benches, snapshotWarning } = await listBenches(params);
-			const lines = [
-				`Found ${benches.length} local PR Bench${benches.length === 1 ? "" : "es"}.`,
-				snapshotWarning ? `Snapshot freshness unavailable: ${snapshotWarning}` : undefined,
-				...benches.map(formatBenchLine),
-			].filter(Boolean);
-			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, benches, snapshotWarning });
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_bench_inspect",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Bench Inspect",
-		description: "Inspect one local Maglev PR Bench without mutating state.",
-		promptSnippet: "Inspect one local PR Bench for OneBusAway/maglev.",
-		promptGuidelines: ["Use maglev_pr_bench_inspect before deciding whether a PR Bench can be reused or safely closed; this tool does not mutate state."],
-		parameters: BenchInspectParamsSchema,
-		async execute(_toolCallId, params) {
-			const { bench, snapshotWarning } = await inspectBench(params.pr);
-			const lines = [
-				bench ? formatBenchLine(bench) : `No local PR Bench found for #${params.pr}.`,
-				snapshotWarning ? `Snapshot freshness unavailable: ${snapshotWarning}` : undefined,
-				...(bench?.warnings.map((warning) => `Warning: ${warning}`) ?? []),
-			].filter(Boolean);
-			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, bench, snapshotWarning });
-		},
-	});
-
-	pi.registerTool({
 		name: "maglev_pr_review_instructions_load",
 		namespace: MAGLEV_TOOL_NAMESPACE,
 		label: "Maglev PR Review Instructions Load",
@@ -718,70 +423,6 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 				runText: (cmd, args, cwd) => runText(cmd, args, cwd, signal),
 			}, signal);
 			return toolResult(formatCodeReviewResult(result), { rootDir: MAINTAINER_ROOT, benchStateDir: BENCH_STATE_DIR, ...result });
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_bench_start",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Bench Start",
-		description: "Plan or execute starting or completing a local Maglev PR Bench with safety checks. Uses a plain checkout and gh pr checkout.",
-		promptSnippet: "Plan starting or reusing a local PR Bench for OneBusAway/maglev.",
-		promptGuidelines: [
-			"Dry-run by default; set apply true only when the maintainer explicitly asks to start or complete the PR Bench.",
-			"maglev_pr_bench_start creates plain checkout-based PR Benches using gh pr checkout, starts Pi in a tmux window named pi without an initial prompt or automatic review, and can complete safe partial Benches, such as missing PR branch, missing tmux session, or missing pi window.",
-			"When handing off to a new Bench Pi session, pass context with relevant goals, findings, constraints, and references. It is appended to the system prompt as background context, not submitted as a task; it does not invoke the kickoff tool. Context cannot be injected by start into an already-existing Pi window.",
-			"Draft PRs, failing checks, pinned decisions, stale/missing triage inference, merge conflicts, and stack-parent gaps are informational and never require acknowledgement to start a review Bench. Only stale/incomplete snapshot data or an existing Bench head mismatch require start-safety acknowledgement; preserve destructive reset/close safeguards.",
-		],
-		parameters: BenchStartParamsSchema,
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await startBench(params.pr, { ...params, currentWorkingDirectory: ctx?.cwd ?? process.cwd() });
-			return toolResult(startReportLines(result).join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_bench_reset",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Bench Reset",
-		description: "Plan or execute resetting an existing local Maglev PR Bench checkout to the snapshot PR head after a force-push.",
-		promptSnippet: "Reset an existing local PR Bench checkout for OneBusAway/maglev to the current snapshot PR head.",
-		promptGuidelines: [
-			"Dry-run by default; set apply true only when the maintainer explicitly asks to reset the PR Bench.",
-			"Use this when an existing PR Bench local HEAD is stale after a contributor force-push.",
-			"Warnings such as dirty local files or stale snapshots should be shown to the maintainer and may be acknowledged with allowDirty or allowStaleSnapshot.",
-		],
-		parameters: BenchResetParamsSchema,
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await resetBench(params.pr, { ...params, currentWorkingDirectory: ctx?.cwd ?? process.cwd() });
-			const lines = formatBenchResetPlan(result.plan);
-			if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
-			else if (result.plan.apply && result.plan.status !== "ready") lines.push("Not applied because the plan is not ready.");
-			if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
-			if (result.mutationWarning) lines.push(result.mutationWarning);
-			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_bench_close",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Bench Close",
-		description: "Close or dry-run closing a local Maglev PR Bench with safety planning and explicit warning acknowledgement.",
-		promptSnippet: "Plan or execute safe closure of a local PR Bench for OneBusAway/maglev.",
-		promptGuidelines: [
-			"Dry-run by default; set apply true only when the maintainer explicitly asks to close the PR Bench.",
-			"Show cleanup warnings before applying. allowDirty covers files (any also covers ignored files); allowStale covers PR head mismatch; allowLocalCommits separately acknowledges committed-work loss or unverified preservation.",
-			"Refusals such as path/PR mismatches should not be overridden in normal flow.",
-		],
-		parameters: BenchCloseParamsSchema,
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const result = await closeBench(params.pr, { ...params, currentWorkingDirectory: ctx?.cwd ?? process.cwd() });
-			const lines = formatBenchClosePlan(result.plan);
-			if (result.applied) lines.push("Executed:", ...result.executed.map((action) => `- ${action}`));
-			else if (result.plan.apply && result.plan.status !== "ready") lines.push("Not applied because the plan is not ready.");
-			if (result.snapshotWarning) lines.push(`Snapshot freshness unavailable: ${result.snapshotWarning}`);
-			return toolResult(lines.join("\n"), { rootDir: MAINTAINER_ROOT, checkoutDir: BENCH_CHECKOUTS_DIR, ...result });
 		},
 	});
 

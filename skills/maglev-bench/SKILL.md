@@ -15,11 +15,11 @@ or lifecycle. Use this skill for both branch development and PR review environme
 
 1. Call `maglev_workspace_context` first. Pass `pr` or `benchId` when known
    (mutually exclusive), and use returned paths/capabilities.
-2. Prefer `maglev_bench_list` for all Benches and `maglev_bench_inspect` with the
-   stable ID for inspection. IDs are distinct from branch names; never guess
-   paths from a sanitized branch name. PR-number adapters
-   `maglev_pr_bench_list` and `maglev_pr_bench_inspect` remain useful for PR-only
-   listings or when only a PR number is known.
+2. Use `maglev_bench_list` for local Benches (optional `ids` or `prs` filters).
+   When only a PR number is known, call `maglev_bench_resolve_pr` with `pr` once.
+   It returns an existing stable `id`, or `id: null` when no Bench exists; it
+   never creates a Bench or guesses an ID. Use `maglev_bench_inspect` with that
+   ID. IDs are distinct from branch names; never derive paths from a branch slug.
 3. Before work depending on remote PR metadata, call
    `maglev_pr_snapshot_staleness`; if `shouldRefresh` is true, call
    `maglev_pr_refresh_metadata` unless live GitHub calls are prohibited.
@@ -30,7 +30,9 @@ or lifecycle. Use this skill for both branch development and PR review environme
 - For a branch, use `maglev_bench_start` with `branch`. Omit `createFrom` to open
   an existing origin branch; supply it only when the user explicitly wants a new
   branch (e.g. from `origin/main`). Initial scope is OneBusAway/maglev.
-- For a PR number, use `maglev_pr_bench_start`. It uses a plain checkout plus
+- For a PR number, use `maglev_bench_start` with `pr`, not `branch` or
+  `createFrom`. Exactly one of `branch` or `pr` is required. Start returns `id`
+  even for a plan; that is a planned identity, not proof a Bench exists. It uses a plain checkout plus
   `gh pr checkout` and resolves an already-associated branch Bench without
   changing its identity. It also completes safe partial PR Benches, such as a
   missing PR branch, tmux session, or `pi` window.
@@ -56,13 +58,13 @@ Check snapshot freshness first, then use `maglev_bench_associate_pr` with the
 existing stable ID and PR number. Association defaults to a plan; apply only on
 explicit request. Head repository/branch must match, and the PR cannot already
 have another Bench. Association preserves branch, ID, checkout, tmux/Pi session,
-and artifact paths. Continue using this skill after association; PR-specific
-adapters resolve the same environment.
+and artifact paths. Continue using the same Bench ID after association.
 
 ## Update after a PR force-push
 
-Use `maglev_pr_bench_reset` for an existing Bench whose HEAD is displaced by a
-contributor force-push, not Bench start. Refresh stale metadata first and inspect
+Use `maglev_bench_reset` with `id` for an existing Bench whose HEAD is displaced
+by a contributor force-push, not Bench start. Reset requires a PR association
+and refuses unassociated Benches; it targets that association's snapshot head. Refresh stale metadata first and inspect
 local state. Reset defaults to a plan; apply only on explicit request after
 showing warnings and obtaining explicit acknowledgement for discarded files.
 
@@ -72,9 +74,9 @@ proof that reset is safe. Do not describe reset as protecting commits.
 
 ## Close or stop the session
 
-Prefer `maglev_bench_close` with the stable ID. `maglev_pr_bench_close` remains a
-PR-number shortcut over the shared lifecycle. Both default to plans; apply only
-on explicit request after inspection and required warning acknowledgements.
+Use `maglev_bench_close` with `id`. Resolve a PR to its existing ID first if
+needed. Close defaults to a plan; apply only on explicit request after inspection
+and required warning acknowledgements.
 
 - Show all cleanup warnings. `allowDirty` covers files (`any` includes ignored
   files); `allowStale` only covers PR-head mismatch. `allowLocalCommits` separately
@@ -93,11 +95,19 @@ on explicit request after inspection and required warning acknowledgements.
 
 ## Commands and related workflows
 
-Prefer `/maglev-benches` and the `/maglev-bench-*` command family for stable-ID
-operations. Existing `/maglev-pr-benches` and `/maglev-pr-bench-*` commands remain
-PR-number shortcuts; PR reset remains a PR-specific operation. Commands differ
-in argument and confirmation handling; follow their documented usage rather than
-assuming the general start command accepts a PR number.
+Use `/maglev-benches` and `/maglev-bench-*`. Start accepts a branch or
+`--pr <number>`; `/maglev-bench-resolve-pr <number>` resolves an existing ID.
+Inspect, close, and reset accept only the stable ID. Mutating commands print plans
+by default; `--apply` explicitly authorizes execution, and warning overrides
+require their dedicated flags. Duplicate PR lifecycle tools/commands are removed.
+
+```text
+/maglev-bench-start --pr 123
+/maglev-bench-resolve-pr 123
+/maglev-bench-inspect <returned-id>
+/maglev-bench-reset <returned-id>
+/maglev-bench-close <returned-id> --keep-checkout --apply
+```
 
 Review and draft creation are separate from lifecycle. Do not invoke
 `maglev_pr_review_instructions_load` automatically after starting or recovering a Bench.

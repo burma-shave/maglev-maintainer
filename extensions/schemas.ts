@@ -55,14 +55,6 @@ export const StateQueryParamsSchema = Type.Object({
 	limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, description: "Maximum rows to return. Defaults to all selected rows." })),
 });
 
-export const BenchListParamsSchema = Type.Object({
-	prs: Type.Optional(Type.Array(PrNumberSchema, { description: "Optional PR number filter." })),
-});
-
-export const BenchInspectParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-});
-
 export const CodeReviewParamsSchema = Type.Object({
 	pr: PrNumberSchema,
 	workingDirectory: Type.Optional(Type.String({ description: "Optional repository checkout for local review. Omit for remote PR-number-only review from the current directory; no Bench or checkout required." })),
@@ -72,42 +64,6 @@ export const CodeReviewParamsSchema = Type.Object({
 export const BenchKickoffParamsSchema = Type.Object({
 	pr: PrNumberSchema,
 	context: Type.Optional(Type.String({ description: "Optional additional context for the on-demand review kickoff." })),
-});
-
-export const BenchStartParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-	context: Type.Optional(Type.String({ description: "Optional caller-supplied handoff/background context appended to the new Pi session's system prompt. Does not submit a task or run a kickoff. Only supported when starting a new Pi window, not reusing an existing one; blank context is ignored." })),
-	apply: Type.Optional(Type.Boolean({ description: "Execute the start/completion plan when it is ready. Defaults to false/dry-run." })),
-	allowDraft: Type.Optional(Type.Boolean({ description: "Legacy no-op; draft status does not block PR Bench start." })),
-	allowBadChecks: Type.Optional(Type.Boolean({ description: "Legacy no-op; failing/problem checks do not block PR Bench start." })),
-	allowConflicts: Type.Optional(Type.Boolean({ description: "Legacy no-op; non-clean GitHub merge state does not block PR Bench start." })),
-	allowPinned: Type.Optional(Type.Boolean({ description: "Legacy no-op; pinned triage decisions do not block PR Bench start." })),
-	allowNeedsInference: Type.Optional(Type.Boolean({ description: "Legacy no-op; missing or stale triage inference does not block PR Bench start." })),
-	allowStaleSnapshot: Type.Optional(Type.Boolean({ description: "Acknowledge stale or incomplete snapshot/head information." })),
-	allowHeadMismatch: Type.Optional(Type.Boolean({ description: "Acknowledge that an existing PR Bench HEAD differs from the snapshot PR head." })),
-	allowStackParentMissing: Type.Optional(Type.Boolean({ description: "Legacy no-op; a missing stack-parent Bench does not block PR Bench start." })),
-	reuseExisting: Type.Optional(Type.Boolean({ description: "Reuse a complete existing PR Bench instead of refusing. Defaults to true." })),
-	snapshotMaxAgeHours: Type.Optional(Type.Number({ minimum: 0, description: "Snapshot age warning threshold. Defaults to the package snapshot staleness threshold." })),
-});
-
-export const BenchResetParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-	apply: Type.Optional(Type.Boolean({ description: "Execute the reset plan when it is ready. Defaults to false/dry-run." })),
-	allowDirty: Type.Optional(Type.Union([Type.Literal("none"), Type.Literal("untracked"), Type.Literal("any")], { description: "Which dirty local file states are acknowledged and discarded by reset planning. Defaults to none." })),
-	allowStaleSnapshot: Type.Optional(Type.Boolean({ description: "Acknowledge stale or incomplete snapshot/head information." })),
-	snapshotMaxAgeHours: Type.Optional(Type.Number({ minimum: 0, description: "Snapshot age warning threshold. Defaults to the package snapshot staleness threshold." })),
-});
-
-export const BenchCloseParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-	apply: Type.Optional(Type.Boolean({ description: "Execute the close plan when it is ready. Defaults to false/dry-run." })),
-	allowDirty: Type.Optional(Type.Union([Type.Literal("none"), Type.Literal("untracked"), Type.Literal("any")], { description: "Which dirty local file states are acknowledged for close planning. Defaults to none." })),
-	allowStale: Type.Optional(Type.Boolean({ description: "Acknowledge that local HEAD differs from the snapshot PR head." })),
-	allowLocalCommits: Type.Optional(Type.Boolean({ description: "Acknowledge losing committed work or unknown preservation state when deleting the checkout." })),
-
-	closeTmux: Type.Optional(Type.Boolean({ description: "Plan to kill the PR Bench tmux session. Defaults to true." })),
-	removeCheckout: Type.Optional(Type.Boolean({ description: "Plan to remove the PR Bench checkout path. Defaults to true. Set false to stop tmux without deleting local work or artifacts." })),
-	deleteBranch: Type.Optional(Type.Boolean({ description: "Plan to delete the local pr-N branch for legacy worktree-based Benches. Plain checkout branches are removed with the checkout directory. Defaults to true." })),
 });
 
 export const ReviewJsonCommentSchema = Type.Object({
@@ -165,12 +121,7 @@ export type SnapshotStalenessParams = Static<typeof SnapshotStalenessParamsSchem
 export type LoadMetadataParams = Static<typeof LoadMetadataParamsSchema>;
 export type NeedsInferenceParams = Static<typeof NeedsInferenceParamsSchema>;
 export type StateQueryParams = Static<typeof StateQueryParamsSchema>;
-export type BenchListParams = Static<typeof BenchListParamsSchema>;
-export type BenchInspectParams = Static<typeof BenchInspectParamsSchema>;
 export type CodeReviewParams = Static<typeof CodeReviewParamsSchema>;
-export type BenchStartParams = Static<typeof BenchStartParamsSchema>;
-export type BenchResetParams = Static<typeof BenchResetParamsSchema>;
-export type BenchCloseParams = Static<typeof BenchCloseParamsSchema>;
 export type ReviewJsonParams = Static<typeof ReviewJsonParamsSchema>;
 export type ReviewJsonClearParams = Static<typeof ReviewJsonClearParamsSchema>;
 export type ReviewJsonListParams = Static<typeof ReviewJsonListParamsSchema>;
