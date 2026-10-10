@@ -113,6 +113,7 @@ metadata tool names are unchanged.
   - `maglev-pr-triage`
   - `maglev-pr-code-review` (Claude Code review plus focused validation and automatic draft handoff for settled findings)
   - `maglev-pr-review-draft` (packages settled findings as prospective review JSON; never submits)
+  - `maglev-pr-analysis-record` (durable SHA-attributed history of every PR analysis, including clean and incomplete outcomes, stored in decision observations)
   - `maglev-bench` (one lifecycle skill for branch and PR environments, including PR association and reset)
   - `maglev-checkout`
   - `maglev-companion-repos`
@@ -174,6 +175,25 @@ review JSON, whether they came from Claude Code, API/spec review, manual
 investigation, or the maintainer. No separate draft request or review-only mode
 exists. Report the draft path/event or a concrete save blocker. Neither skill
 starts a Bench or submits a GitHub review. No findings alone is not approval.
+
+Every PR analysis also follows `maglev-pr-analysis-record`: append a self-contained
+`analysis:` observation via `maglev_pr_decisions` with date, type/scope, analyzed SHA
+and provenance, completion/outcome, findings/no-findings, evidence, and validation
+limits. Preserve older observations across re-reviews and queue updates. This uses
+the existing decision schema and tools, not a new state file. Read-only subagents
+return record facts; parents save them sequentially. A clean completed code review
+normally moves a PR to `review` as a potential merge candidate, without overriding
+explicit holds or authorizing merge. Draft clearing does not remove analysis history.
+Use decision `get` or a focused state query to answer whether a review was done,
+at which SHA, and with what result; `list` omits these detailed observations.
+Older-SHA or unknown-SHA records do not establish current-head review coverage.
+Before selecting or launching reviews, the skills require exact analysis-history
+inspection against the fresh current PR head. Completed same-SHA, same-scope code
+reviews are skipped whether clean or with findings, unless a concrete new
+scope/validation need or explicit fresh-review override justifies a rerun. A request
+to review more PRs is not such an override. Candidate analysts return compact
+history evidence; parents enforce this guardrail before dispatch. This is skill
+policy, not a deterministic refusal enforced by the raw code-review tool.
 
 The existing explicitly requested `maglev_pr_review_instructions_load` is the composition
 point: its instructions load the code-review skill first, then the draft skill.

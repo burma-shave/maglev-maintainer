@@ -91,6 +91,21 @@ Suggested decision fields:
 - `basis.meaningfulUpdatedAt`
 - `basis.headOid`
 
+The existing `observations` array also carries durable PR analysis history through
+self-contained `analysis:` records: absolute timestamp, type/scope, analyzed SHA
+and provenance, status/outcome, findings/no-findings, evidence, and validation limits.
+`maglev-pr-analysis-record` defines this skill-level convention; no new file/schema
+is introduced. Preserve older records when updating a decision. The analyzed SHA
+lives in each observation, independently of the writer's current snapshot basis.
+Decision get/focused state query exposes history; compact list output omits it.
+Parent orchestrators serialize get/merge/upsert for a PR; the filesystem lock covers
+upsert, not a caller-side atomic append. Concurrent sessions require a single owner.
+Review-selection skills and candidate analysts inspect exact history against fresh
+head metadata before recommending or dispatching reviews. Completed same-SHA,
+same-scope code reviews are reused regardless of findings; reruns need a concrete
+scope/validation reason or explicit override. This pre-launch skill guardrail does
+not add a post-review SHA gate or a raw-tool deterministic refusal.
+
 ## Tool surface
 
 All registered tools share the stable `maglev` namespace from
@@ -214,7 +229,7 @@ Skills orchestrate policy and inference using deterministic tools:
 
 - Triage keeps the parent on compact discovery/decision results, delegates one PR per fresh-context analyst, and lets that child load its assigned PR facts. The parent owns ordering, acceptance, and serialized decision persistence. Focused parent inspection of a deliberately selected PR remains supported.
 - The single `maglev-bench` skill owns branch and PR lifecycle, not review policy; it does not call legacy helper scripts. PR numbers are entry points for start and read-only resolution; subsequent lifecycle operations use stable IDs.
-- `maglev-pr-code-review` runs Claude Code and focused validation; a standalone request does not mutate drafts. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. The current explicit kickoff composes these two; it is not triggered by Bench startup.
+- `maglev-pr-code-review` runs Claude Code and focused validation, automatically saves drafts for settled actionable findings, and records every outcome through `maglev-pr-analysis-record`. A completed clean review is potential merge-readiness evidence, not approval; preserve explicit holds. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. Draft clearing never erases durable analysis history. The current explicit kickoff composes these workflows; it is not triggered by Bench startup.
 - OBA API/spec skills provide a distinct behavior/client/spec review and may hand settled findings to the shared draft skill when requested. They resolve companion repos through the package tools, not hard-coded sibling paths or shell resolver scripts.
 - `maglev-artifacts` organizes working artifacts and delegates tool-owned state or generated-script mutations to their dedicated tools/skills. It places maintainer working reports/handoffs in the applicable `artifacts.targetReportsDir` for PR or branch Benches; without an applicable Bench, use `<maintainerRoot>/plans/`. Association preserves paths, and explicit destinations take precedence. Never default to checkout-local `tmp/`.
 - `maglev-handoff-script` generates reviewable executable scripts under `artifacts.generatedScriptsDir`, mode `0755`. Human execution performs listed writes immediately unless preview/apply gates were explicitly requested. Generation does not authorize execution or publication.

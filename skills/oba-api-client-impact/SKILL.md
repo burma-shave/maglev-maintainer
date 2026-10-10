@@ -9,6 +9,15 @@ Assess the impact of a production change (or proposed change) on the three OBA c
 
 Typically invoked by `oba-api-change-review` or reused by `oba-api-pr-spec-review`. Call directly when you want isolated client analysis without goal/spec review. This packaged version can run from a normal `maglev` checkout or a PR Bench checkout. Call `maglev_workspace_context` first so companion repos and caveats are resolved through the Maglev Maintainer framework.
 
+## Durable PR analysis
+
+For an identified PR, follow `../maglev-pr-analysis-record/SKILL.md` to save a
+`client-impact` record with source SHA/provenance, scope, impact/no-impact outcome,
+client-source evidence, and limitations, including blocked/failed checks. When
+called by a parent review, return these record facts to that parent for serialized
+persistence rather than independently replacing its decision. A proposal without
+an analyzed commit cannot establish current-head coverage.
+
 ## Arguments
 
 1. The endpoint name.

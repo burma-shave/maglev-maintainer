@@ -28,6 +28,7 @@ Expect a PR number, expected snapshotFetchedAt, analysis/as-of timestamp, cwd, a
 4. Trace the human discussion, reviews, and commit chronology. Identify who owes the next action, unanswered maintainer questions, updates after requested changes, chase dates, draft status, check failures, conflicts, stack dependencies, and explicit spec/direction holds. Existing pinned/user decisions are constraints: flag any proposed change for parent confirmation rather than silently overriding it. Bot approval and clean checks are evidence, not proof of correctness or merge safety.
 5. Recommend a bucket and priority (0–9; higher means more urgent). Prioritize concrete maintainer-attention signals, then age; batch chase separately. Do not rank by perceived product value. Explain wait/chase judgments with absolute dates and the supplied as-of timestamp; if no explicit waiting policy exists, acknowledge the judgment rather than inventing a mandatory deadline.
 6. This is metadata triage, not code/spec review. Describe scope and estimated review effort only if supported. Treat commit messages claiming a fix or parity as claims, not verified closure. If snapshot evidence cannot settle readiness, name the one check the maintainer needs to perform.
+7. When assessing code-review candidates, always load exact saved analysis observations through `maglev_pr_state_query({prs: [N]})` and apply the triage skill's pre-review history guardrail. Compare the recorded full SHA, type, completion status, scope, and validation limitations against the current snapshot head and requested review. Completed same-SHA, same-scope code reviews should be skipped whether clean or with findings; name maintainer merge checks or contributor fixes as the next action. Do not equate bot/metadata/API/spec review with general code review. Changed SHA, incomplete/unknown coverage, or a concrete new scope/validation need may warrant review. State the concrete same-SHA rerun reason or explicit override; “review more PRs” is not an override. Return compact prior-review evidence and skip/review rationale, never raw history or a claim that history-read failure means no prior review.
 
 ## Compact result contract
 
@@ -44,6 +45,7 @@ Return one JSON object, no raw metadata, full discussions, diffs, or transcripts
   "action": "Concrete next maintainer/contributor action",
   "attention": "maintainer | clean-review | chase | wait | blocked",
   "readiness": {"draft": false, "mergeState": "CLEAN", "badChecks": [], "blockers": [], "reviewStatus": "Short human/bot distinction", "scopeAndEffort": "Short supported scope/effort or unknown"},
+  "reviewHistory": {"checked": true, "sha": "prior analyzed SHA or null", "type": "analysis kind or null", "at": "analysis date or null", "outcome": "prior outcome or null", "scopeAndLimitations": "Short summary or unknown", "selection": "skip | review | blocked | not-requested", "reason": "Concrete reuse/review reason or blocker"},
   "age": {"createdAt": "ISO timestamp", "waitingSince": "ISO timestamp or null"},
   "evidence": ["Up to three decisive actor/date facts; include comment/review URLs when available"],
   "confidence": "high | medium | low",
@@ -51,5 +53,7 @@ Return one JSON object, no raw metadata, full discussions, diffs, or transcripts
   "needsParentConfirmation": false
 }
 ```
+
+Use `reviewHistory.checked: true` only after successfully inspecting exact analysis observations. For ordinary triage without code-review selection, use `checked: false` and `selection: "not-requested"`; unknown or unreadable coverage is not a checked clean review. A missing decision can be checked successfully but establishes no prior coverage.
 
 For `blocked`, return just status, pr, available basis, caveats, and the needed next action; omit the recommendation. Never fabricate evidence or fill unknowns with optimistic defaults. Keep `reason` and `observations` suitable for `maglev_pr_decisions`: no relative phrases such as today, yesterday, or recently. Carry tool warnings/notes as caveats. Before returning, check that the PR/basis match the assignment, action follows the latest human signal, and every readiness claim is supported.

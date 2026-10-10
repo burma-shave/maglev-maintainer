@@ -21,16 +21,38 @@ Use this skill to infer PR buckets from the durable Maglev Maintainer GitHub sna
 - Do not write relative temporal phrases such as `today`, `yesterday`, `recently`, or `this morning` into durable decision `reason` or `observations`; use absolute dates from the snapshot instead, such as `maintainer chased on 2026-09-05`.
 - Do not parallelize `maglev_pr_decisions` mutations; upsert/delete calls should run sequentially so durable decision updates are easy to audit.
 
+## Selecting PRs for code review
+
+Before recommending or launching code reviews (including “review more PRs”), apply
+the pre-review history guardrail in `../maglev-pr-analysis-record/SKILL.md`.
+Each candidate's fresh-context analyst must inspect the exact decision observations
+with a focused `maglev_pr_state_query({prs: [N]})`, compare completed analysis
+SHA/type/scope with the current snapshot head, and return compact history evidence
+and a skip/review reason. Do not infer coverage from compact queue output or drafts.
+
+Exclude completed same-SHA, same-scope code reviews from automatic review batches,
+**with or without findings**: reuse clean results as potential merge-readiness
+evidence, and reuse actionable findings as contributor/decision work. Changed heads,
+incomplete reviews, or materially different scope/validation needs can justify a
+review; unknown SHA or absent history does not establish coverage. A same-SHA rerun
+requires a concrete reason or explicit user fresh-review override, stated before
+dispatch. Report skipped candidates briefly; choose other eligible PRs rather than
+filling a requested batch quota with redundant reviews. Recheck changed selection
+evidence/history before dispatch, and pass the guardrail evidence to review children.
+History-read failures/conflicting records require narrow resolution or a blocker,
+not silent bypass. New readiness analysis is recorded as metadata triage, not as a
+new code review; saved-result reuse alone does not authorize approval or merging.
+
 ## Flow
 
 1. Call `maglev_pr_snapshot_staleness` before relying on PR metadata.
 2. If `shouldRefresh` is true because the snapshot is missing or older than the package threshold (currently 4 hours), call `maglev_pr_refresh_metadata` unless the maintainer explicitly asked not to make live GitHub calls.
 3. After any successful snapshot refresh, call `maglev_bench_list`, select rows with a `pr` association, and check whether each active local PR Bench still corresponds to a PR in the refreshed open-PR snapshot. Use `maglev_pr_state_query` with the active Bench PR numbers when exact joined state is needed. If a Bench no longer has an open snapshot PR, tell the maintainer it appears to be for a closed or merged PR and ask whether they want to clean up that PR Bench. Do not close it unless they explicitly ask.
 4. Call `maglev_pr_needs_inference` to find PRs with missing or stale decisions.
-5. Do not load all selected PRs' metadata into the parent. Use `package.triageAgent` from workspace context (currently `maglev-maintainer.pr-triage-analyst`) for agent discovery and delegation rather than constructing the package-qualified name. Enable subagents with `subagents_enable` when needed, then confirm that agent is available using `subagent({action: "list", capabilities: true})`. Assign each selected PR to one fresh-context analyst, supplying only PR number, snapshotFetchedAt from `maglev_pr_needs_inference`, an absolute as-of timestamp, cwd, and explicit maintainer constraints. The analyst loads that PR's metadata itself and returns the compact result contract from its agent definition.
+5. Do not load all selected PRs' metadata into the parent. Use `package.triageAgent` from workspace context (currently `maglev-maintainer.pr-triage-analyst`) for agent discovery and delegation rather than constructing the package-qualified name. Enable subagents with `subagents_enable` when needed, then confirm that agent is available using `subagent({action: "list", capabilities: true})`. Assign each selected PR to one fresh-context analyst, supplying only PR number, snapshotFetchedAt from `maglev_pr_needs_inference`, an absolute as-of timestamp, cwd, and explicit maintainer constraints. The analyst loads that PR's metadata itself and returns the compact result contract from its agent definition. When selecting code-review candidates, explicitly include the pre-review history guardrail in the assignment and require prior SHA/type/outcome, scope/limitations, and a skip/review reason.
 6. Use direct async calls for one PR, or a bounded workflow/rolling fanout for multiple PRs (at most three active analysts). Use `context: "fresh"`, never fork the parent transcript. Do not pass full PR facts or read child logs/transcripts back into the parent. In an interactive session, yield when only async work remains and resume on native completion notifications. The analyst is read-only: no refreshes, decisions, PR Bench mutations, GitHub calls, or nested delegation.
 7. Check each compact result's PR, basis, evidence, confidence, and caveats. The parent owns cross-PR urgency ordering and the settled bucket/priority. Respect explicit maintainer/user pins; resolve `needsParentConfirmation` before changing them. For low-confidence or contradictory results, ask a narrow follow-up or load only the disputed PR's exact state; do not bulk-load metadata as a fallback.
-8. Before saving results, call `maglev_pr_snapshot_staleness` again and compare its `fetchedAt` to the analyzed `basis.snapshotFetchedAt`. If it changed, discard affected recommendations and reanalyze against the new snapshot; do not stamp old analysis with new facts. Do not refresh while an analysis batch is active. Persist accepted results sequentially with `maglev_pr_decisions` operation `upsert`, using the returned reason/observations and basis. Do not persist blocked, failed, missing, or unresolved recommendations.
+8. Before saving results, call `maglev_pr_snapshot_staleness` again and compare its `fetchedAt` to the analyzed `basis.snapshotFetchedAt`. If it changed, discard affected recommendations and reanalyze against the new snapshot; do not stamp old analysis with new facts. Do not refresh while an analysis batch is active. Follow `../maglev-pr-analysis-record/SKILL.md` to record every attempted per-PR `metadata-triage` analysis with its original SHA/basis, outcome, and caveats, preserving older observations. Persist accepted results sequentially with `maglev_pr_decisions` operation `upsert` for queue recommendations. Blocked, failed, missing, unresolved, or superseded analysis records must explicitly state that status and must not replace the existing queue recommendation; use a neutral review/blocked reason only if no decision exists.
 9. Summarize review, chase, watch, and pinned queues from the compact results. Include warnings/notes and any PRs whose analysis is incomplete.
 
 ### Availability and fallback
@@ -44,7 +66,7 @@ Requests such as "give me an overview of open PRs" invoke this skill; they are n
 1. Check snapshot freshness using flow steps 1–3, then call `maglev_pr_needs_inference` and read saved buckets with `maglev_pr_decisions` operation `list`. These are compact discovery inputs, not substitutes for current analysis.
 2. Delegate every PR with a missing or stale decision to the fresh-context analyst using flow steps 5–7 (at most three active analysts). Do not label an overview "facts-only" or "existing queues" to avoid this step. For PRs with current saved decisions, summarize those decisions without loading their detailed metadata.
 3. If the requested overview needs facts absent from the compact inputs (titles, readiness, blockers, or current review evidence), delegate the relevant PRs, including ones with current decisions. Analysts load their own per-PR facts; the parent receives only compact results.
-4. An overview request alone does not require writing decisions. If persisting accepted triage results, follow step 8. Never silently present stale saved buckets as current; mark pending or failed analysis explicitly.
+4. New per-PR analysis always requires saving its durable analysis record via step 8, even for an overview. A saved-queue-only read that performs no new analysis does not need a new record. Never silently present stale saved buckets as current; mark pending or failed analysis explicitly.
 5. If delegation is unavailable, follow the availability fallback above. Give a clearly labeled saved-queue summary if useful, explain its limits, and ask for approval before parent-side analysis one PR at a time. Never bulk-load the backlog as a fallback.
 
 A saved-queue-only summary may skip delegation only when no missing/stale decisions are being represented as current and no new per-PR evidence or inference is needed. A close-to-merge shortlist requires delegated evidence checks for the selected PRs even if they are not in `needs-inference`.

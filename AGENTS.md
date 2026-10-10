@@ -134,6 +134,28 @@ focused parent inspection of one selected PR remains supported. Do not use live
 Meaningful activity excludes bot/status churn. Current head-change timestamp and
 basis-stamping limitations remain open findings F3/F4; do not claim they are fixed.
 
+### Durable PR analysis history
+
+After any analysis of an identified PR (code, API/spec/client/goal, metadata
+triage, manual investigation), follow `maglev-pr-analysis-record`. Save an
+`analysis:` observation through `maglev_pr_decisions`, including absolute date,
+analysis type/scope, full analyzed SHA and provenance (or explicit unknown),
+completion status, findings/no-findings, evidence paths, and validation limits.
+Get the existing decision and preserve all older observations/SHAs before appending;
+parent orchestrators own serialized persistence for read-only children. Reports,
+logs, mission summaries, and drafts alone are not canonical analysis history.
+Failed/incomplete attempts also need records, but must not imply clean coverage.
+A clean completed code review normally means `review`/potential merge candidate,
+not approval; explicit pins and unresolved holds remain authoritative. Answer
+history questions using decision `get`/focused state query and distinguish old-SHA
+analysis from current-head coverage. Draft deletion never erases this history.
+Before selecting or launching code reviews, inspect exact history and fresh current
+head. Skip completed same-SHA, same-scope reviews with or without findings; require
+a concrete new scope/validation reason or explicit fresh-review override for reruns.
+Generic requests to review more PRs are not overrides. Read-only candidate analysts
+return compact history evidence and the parent applies the guardrail before dispatch.
+Reuse is not a new code review or approval; this is not a post-review SHA gate.
+
 ### Reviews and drafts
 
 `maglev-pr-code-review` runs the existing Claude Code tool and validates findings.

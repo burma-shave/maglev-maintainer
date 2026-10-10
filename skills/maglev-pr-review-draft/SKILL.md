@@ -22,6 +22,17 @@ This skill packages an already-decided review. Whenever settled actionable PR re
 6. Call `maglev_pr_review_draft_save` with `pr`, `repo: "OneBusAway/maglev"`, `event`, `body`, and optional `comments`. Inline comments use repository-relative `path`, positive `line`, `side: "RIGHT"` for new lines or `"LEFT"` for old lines, and `body`. Use only accurate commentable diff locations; put broader findings in the top-level body. The tool validates locations, not the truth of findings. If validation fails, inspect and correct the location or move a genuinely broader finding to the summary; never fabricate an anchor just to pass validation.
 7. Check the tool result, including the saved commit, event, comment count, and `outputPath`. Do not add a SHA-confirmation gate for Claude Code findings. For other findings known to refer to an older revision, flag the draft as needing revalidation before use; do not claim it is ready. Report the artifact path and outcome concisely.
 
+## Durable analysis outcome
+
+Drafts are prospective publication artifacts, not analysis history. Whenever this
+flow creates or clears a draft following an analysis, follow
+`../maglev-pr-analysis-record/SKILL.md` to persist the originating analysis type,
+source SHA/provenance, findings or no-findings, and limitations in PR decisions.
+If the originating workflow already recorded that same analysis, preserve it and
+avoid a duplicate; record any newly settled revision/disposition separately.
+Deleting a draft does not delete or invalidate prior analysis records. Merely
+listing, loading, or manually clearing drafts is not a new code review.
+
 ## Boundaries
 
 - Write/overwrite prospective review JSON only through `maglev_pr_review_draft_save`; never use shell redirection, `write`, or `edit` for the artifact. Clear only through `maglev_pr_review_draft_clear`.

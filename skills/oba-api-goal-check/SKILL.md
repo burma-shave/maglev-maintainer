@@ -9,6 +9,15 @@ Assess whether a change fully accomplishes its stated goal, including adequate t
 
 Typically invoked by `oba-api-change-review`. Call directly only when you have a specific gap description and want isolated goal-closure analysis without client-impact or spec-maintenance workflow. This packaged version can run from a normal `maglev` checkout or PR Bench checkout; call `maglev_workspace_context` first and resolve `maglev.wiki` through Maglev Maintainer tools.
 
+## Durable PR analysis
+
+For an identified PR, follow `../maglev-pr-analysis-record/SKILL.md` to save a
+`goal-check` record with source SHA/provenance, scope, closed/partial/missing goal
+outcome, test evidence, and limitations, including blocked/failed analysis. When
+called by a parent review, return these record facts to that parent for serialized
+persistence rather than independently replacing its decision. Prospective goal
+interpretation is not implementation validation or general code review.
+
 ## Arguments
 
 1. The stated goal or gap description — from a spec-gap issue, a PR body, or a user-supplied description of intent.

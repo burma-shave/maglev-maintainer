@@ -11,6 +11,15 @@ Typically invoked by `oba-api-change-review`. Call directly when you want to iso
 
 **This skill identifies where a spec is inconsistent, incomplete, or needs a new Implementation Decisions entry — it does not edit `maglev.wiki` itself.** A spec change affects every client and every future review, so route actual wiki edits through the agreed spec-maintenance process (typically `oba-api-pr-spec-review` → `oba-wiki-spec-update`) rather than editing the wiki unilaterally.
 
+## Durable PR analysis
+
+For an identified PR, follow `../maglev-pr-analysis-record/SKILL.md` to save a
+`spec-review` record with source SHA/provenance, scope, consistency/findings outcome,
+wiki/Java evidence, and limitations, including blocked/failed analysis. When
+called by a parent review, return these record facts to that parent for serialized
+persistence rather than independently replacing its decision. A spec-only clean
+result is not general code review or approval.
+
 ## Arguments
 
 1. The endpoint name.

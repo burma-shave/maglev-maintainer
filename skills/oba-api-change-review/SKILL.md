@@ -175,6 +175,17 @@ A short plain-English summary of what the analysis found. Note anything that is 
 
 Whenever this analysis settles actionable findings for an identified PR, automatically follow `../maglev-pr-review-draft/SKILL.md` and save a prospective draft. No separate draft request or `--output` flag is needed. Include the draft path/event or a concrete save blocker in the final response. For branch/working-tree/proposal analysis without an identified PR, report that limitation rather than inventing a PR number.
 
+### Durable PR analysis record (always, independent of `--output`)
+
+For an identified PR, follow `../maglev-pr-analysis-record/SKILL.md` before final
+handoff. Save the `api-review` outcome and each distinct goal/client/spec analysis
+actually performed, with source SHA/provenance, scope, findings/no-findings, and
+validation limitations. Failed/incomplete analyses also need records, not clean
+verdicts. An orchestrator owns serialized saves; sub-skills return record facts to
+it rather than overwriting the same PR decision in parallel. For a proposal or
+uncommitted diff, record the revision limitation; do not imply current-head code
+review coverage. With no PR identity, report the persistence limitation.
+
 ### 8. Save the report to a file (only if `--output` was given)
 
 Skip this report-file step if `--output` was not given; the prospective PR draft handoff above still applies.

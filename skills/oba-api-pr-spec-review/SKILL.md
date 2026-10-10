@@ -359,6 +359,16 @@ publication script, use `maglev-handoff-script` with that saved draft. Preserve
 user approval before publication; creating either artifact never authorizes
 executing a GitHub write.
 
+## Durable PR analysis record
+
+Follow `../maglev-pr-analysis-record/SKILL.md` to save the `spec-review` at its
+source SHA, including scope, findings/no-findings, pending or settled SD decisions,
+prior-feedback dispositions, validation limits, and report/handoff evidence. Save
+an incomplete record before pausing for user decisions, then append the settled
+result after those decisions; preserve both. Reuse already recorded sub-analysis
+results without duplicating them. A spec-only no-findings result is not proof that
+a general code review ran or that all merge holds are resolved.
+
 ## Final response
 
 End with:
