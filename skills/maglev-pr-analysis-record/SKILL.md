@@ -6,7 +6,7 @@ description: Persist or retrieve durable Maglev PR analysis history, including a
 # Maglev PR analysis record
 
 Every analysis of an identified PR must leave a durable record, including clean,
-failed, incomplete, and blocked analyses. Reports, Claude logs, subagent results,
+failed, incomplete, and blocked analyses. Reports, reviewer logs, subagent results,
 mission summaries, and prospective drafts are evidence, not substitutes for this
 record. Clearing a draft must not erase the analysis history.
 
@@ -17,7 +17,7 @@ retrieved with decision `get` or a focused `maglev_pr_state_query`; the compact
 
 ## Pre-review history guardrail
 
-Before selecting a PR for review **and before launching** `maglev_pr_code_review`
+Before selecting a PR for review **and before launching** any review provider
 or a review subagent, inspect its durable analysis history. This applies in clean
 sessions and to requests such as “review some more PRs”; that request alone is
 not an override to repeat completed reviews.
@@ -62,7 +62,7 @@ A history-only lookup/reuse is not a new code review: do not append a misleading
 or erase history. If new readiness analysis was performed, record it as
 `metadata-triage` with the skip/reuse reason. Skipping review never implies approval.
 This is a **pre-launch selection check**, not a new post-review SHA gate for
-Claude Code completion or draft creation.
+review completion or draft creation.
 
 ## Record an analysis
 
@@ -79,7 +79,7 @@ Claude Code completion or draft creation.
    the limitation; do not invent a SHA or omit the failed analysis. Uncommitted
    edits require a dirty/diff caveat; HEAD alone does not identify those edits.
    This records revision attribution, not an extra SHA-confirmation gate for
-   Claude Code review completion or draft creation.
+   review completion or draft creation.
 3. Compose a self-contained observation using absolute dates:
 
    `analysis: at=<ISO timestamp>; type=<kind>; sha=<full SHA or unknown>; shaSource=<provenance>; status=<completed|incomplete|failed|blocked>; outcome=<actionable-findings|no-actionable-findings|unconfirmed|not-applicable>; summary=<scope and result>; validation=<checks actually performed and limitations>; evidence=<log/report/draft paths or source references>; next=<next action>`

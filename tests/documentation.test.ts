@@ -50,10 +50,10 @@ async function registeredToolNames() {
 	return names;
 }
 
-test("skill, agent, prompt, and capability references resolve to namespaced tools", async () => {
+test("skill, agent, and capability references resolve to namespaced tools", async () => {
 	const tools = await registeredToolNames();
 	const docs = (await skillDocs()).map(({ name, text }) => ({ name, text }));
-	for (const dir of ["agents", "prompts"]) {
+	for (const dir of ["agents"]) {
 		for (const name of await readdir(new URL(`${dir}/`, root))) {
 			if (name.endsWith(".md")) docs.push({ name: `${dir}/${name}`, text: await read(`${dir}/${name}`) });
 		}
@@ -69,6 +69,30 @@ test("skill, agent, prompt, and capability references resolve to namespaced tool
 	}
 	for (const legacy of ["maglev_pr_workspace_context", "maglev_pr_checkout", "maglev_pr_companion_repos", "maglev_pr_api_start", "maglev_pr_api_stop", "maglev_pr_api_status", "maglev_pr_review_json", "maglev_pr_review_json_clear", "maglev_pr_review_json_list", "maglev_pr_review_json_load", "maglev_pr_bench_kickoff", "maglev_pr_bench_list", "maglev_pr_bench_inspect", "maglev_pr_bench_start", "maglev_pr_bench_reset", "maglev_pr_bench_close"]) {
 		assert.ok(!tools.has(legacy), `unexpected legacy alias ${legacy}`);
+	}
+});
+
+test("documentation no longer inventories bundled review execution or kickoff", async () => {
+	for (const path of ["README.md", "docs/design.md"]) {
+		const text = await read(path);
+		assert.doesNotMatch(text, /(?:Use|Call|invoke|run) `maglev_pr_(?:code_review|review_instructions_load)`/);
+		assert.doesNotMatch(text, /- `extensions\/(?:code-review|bench-kickoff)\.ts`/);
+		assert.doesNotMatch(text, /- `prompts\/bench-kickoff\.md`/);
+		assert.doesNotMatch(text, /  - `maglev_pr_(?:code_review|review_instructions_load)`/);
+		assert.doesNotMatch(text, /The wrapper invokes|wrapper does not\s+prove/);
+	}
+});
+
+test("review-provider boundary documents independent discovery and state preservation", async () => {
+	for (const path of ["README.md", "docs/design.md"]) {
+		const text = await read(path);
+		assert.match(text, /separately loaded review extensions and skills/);
+		assert.match(text, /does\s+not guarantee|does not guarantee/);
+		assert.match(text, /without\s+a review\s+provider or Claude CLI/);
+		assert.match(text, /Breaking removal/);
+		assert.match(text, /Reload Pi/);
+		assert.match(text, /without\s+aliases or\s+replacements/);
+		assert.match(text, /observations, drafts, logs, and Bench artifacts are not\s+migrated or deleted/);
 	}
 });
 
@@ -127,11 +151,11 @@ test("one Bench skill covers unified ID-based lifecycle without weakening safegu
 	assert.ok(!names.has("maglev-pr-bench"));
 	assert.ok(!names.has("librarian"));
 	const bench = await read("skills/maglev-bench/SKILL.md");
-	for (const tool of ["maglev_bench_start", "maglev_bench_list", "maglev_bench_inspect", "maglev_bench_close", "maglev_bench_associate_pr", "maglev_bench_resolve_pr", "maglev_bench_reset", "maglev_pr_review_instructions_load"]) {
+	for (const tool of ["maglev_bench_start", "maglev_bench_list", "maglev_bench_inspect", "maglev_bench_close", "maglev_bench_associate_pr", "maglev_bench_resolve_pr", "maglev_bench_reset"]) {
 		assert.ok(bench.includes(`\`${tool}\``), `missing lifecycle guidance for ${tool}`);
 	}
 	assert.match(bench, /Reset does \*\*not\*\* have close's committed-work protection/);
-	assert.match(bench, /Do not invoke\s+`maglev_pr_review_instructions_load` automatically/);
+	assert.match(bench, /Starting or\s+recovering a Bench runs neither automatically/);
 	assert.match(bench, /allowLocalCommits/);
 	assert.match(bench, /removeCheckout: false/);
 	const artifacts = await read("skills/maglev-artifacts/SKILL.md");

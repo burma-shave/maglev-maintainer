@@ -188,13 +188,9 @@ Unified Bench tools:
 - `maglev_bench_close` (stable ID; dry-run by default, explicit apply/acknowledgements)
 - `maglev_bench_associate_pr` (stable ID plus matching PR; identity-preserving)
 
-PR-facing review tools remain separate:
-- `maglev_pr_review_instructions_load` (explicit on-demand instructions/context for the calling agent, never automatic)
-- `maglev_pr_code_review` (headless Claude Code `/code-review` plus captured logs; PR-number-only remote review by default, optional explicit checkout; no Bench lookup)
-
 ### PR Bench start safety model
 
-Start is implemented directly in this package, not as a wrapper around the old PRRS helper scripts. Like close, it is deterministic and non-interactive at the tool layer: plan first, apply only when there are no refusals and all safety warnings are explicitly acknowledged. Review-readiness information is not a safety warning. Apply creates independent plain checkouts and can complete safe partial PR Benches, such as an existing checkout missing the PR branch, tmux session, or `pi` tmux window. Starting or recovering a Bench launches `pi --name "Review PR #N"` without an initial user prompt, generated kickoff file, or automatic review. Agents can optionally provide free-form `context` to Bench start. Only when a new Pi window is launched, context is saved verbatim in a unique `benches/pr-N/context-<id>.md` file and loaded with `--append-system-prompt`. This adds background context without triggering a model turn. Dry runs write no context files, and passing context when reusing an existing Pi window is refused to avoid losing the handoff or interfering with a live session. The separate `maglev_pr_review_instructions_load` tool loads the existing read-only review instructions and snapshot/triage context on explicit request. It returns instructions to the calling agent rather than sending input to the Bench's Pi session; its optional `context` augments only that on-demand review workflow, independently of the startup context accepted by Bench start.
+Start is implemented directly in this package, not as a wrapper around the old PRRS helper scripts. Like close, it is deterministic and non-interactive at the tool layer: plan first, apply only when there are no refusals and all safety warnings are explicitly acknowledged. Review-readiness information is not a safety warning. Apply creates independent plain checkouts and can complete safe partial PR Benches, such as an existing checkout missing the PR branch, tmux session, or `pi` tmux window. Starting or recovering a Bench launches `pi --name "Review PR #N"` without an initial user prompt, generated kickoff file, or automatic review. Agents can optionally provide free-form `context` to Bench start. Only when a new Pi window is launched, context is saved verbatim in a unique `benches/pr-N/context-<id>.md` file and loaded with `--append-system-prompt`. This adds background context without triggering a model turn. Dry runs write no context files, and passing context when reusing an existing Pi window is refused to avoid losing the handoff or interfering with a live session.
 
 The core start planner currently treats these as refusals:
 
@@ -269,13 +265,29 @@ The current TUI is a deterministic client of the same functions/tools:
 interactive TRIAGE tab, and manual decision marking through the decision API.
 Use metadata/decision tools and skills for those operations today.
 
+## Review-provider boundary
+
+Review execution is supplied by separately loaded review extensions and skills
+through Pi discovery, not a maintainer dispatcher. Maglev Maintainer loads without
+a review provider or Claude CLI; it neither installs one nor supplies a fallback.
+Discovery does not guarantee that external workflows follow the maintainer
+history/draft policies. Provider execution, publication controls, and log retention
+remain external responsibilities.
+
+**Breaking removal:** the bundled code-review runner, review-instructions loader,
+launch skill, prompt, and local batch-review agent are removed without aliases or
+replacements. Reload Pi and update external callers after upgrading. Existing
+observations, drafts, logs, and Bench artifacts are not migrated or deleted.
+Returned external evidence paths fit the existing analysis-record convention;
+no log relocation or canonical state migration is introduced.
+
 ## Skill responsibilities
 
 Skills orchestrate policy and inference using deterministic tools:
 
 - Triage keeps the parent on compact discovery/decision results, delegates one PR per fresh-context analyst, and lets that child load its assigned PR facts. The parent owns ordering, acceptance, and serialized decision persistence. Focused parent inspection of a deliberately selected PR remains supported.
 - The single `maglev-bench` skill owns branch and PR lifecycle, not review policy; it does not call legacy helper scripts. PR numbers are entry points for start and read-only resolution; subsequent lifecycle operations use stable IDs.
-- `maglev-pr-code-review` runs Claude Code and focused validation, automatically saves drafts for settled actionable findings, and records every outcome through `maglev-pr-analysis-record`. A completed clean review is potential merge-readiness evidence, not approval; preserve explicit holds. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. Draft clearing never erases durable analysis history. The current explicit kickoff composes these workflows; it is not triggered by Bench startup.
+- `maglev-pr-analysis-record` records outcomes from any PR analysis, including external code reviews. A completed clean review is potential merge-readiness evidence, not approval; preserve explicit holds. `maglev-pr-review-draft` accepts settled findings from any source, writes via dedicated tools, and never submits to GitHub. Draft clearing never erases durable analysis history. Neither workflow starts automatically with a Bench.
 - OBA API/spec skills provide a distinct behavior/client/spec review and may hand settled findings to the shared draft skill when requested. They resolve companion repos through the package tools, not hard-coded sibling paths or shell resolver scripts.
 - `maglev-artifacts` organizes working artifacts and delegates tool-owned state or generated-script mutations to their dedicated tools/skills. It places maintainer working reports/handoffs in the applicable `artifacts.targetReportsDir` for PR or branch Benches; without an applicable Bench, use `<maintainerRoot>/plans/`. Association preserves paths, and explicit destinations take precedence. Never default to checkout-local `tmp/`.
 - `maglev-handoff-script` generates reviewable executable scripts under `artifacts.generatedScriptsDir`, mode `0755`. Human execution performs listed writes immediately unless preview/apply gates were explicitly requested. Generation does not authorize execution or publication.
@@ -286,7 +298,6 @@ Close's commit-preservation safeguards do not currently apply to reset: preserve
 unpushed work before forced checkout (F1). Legacy attribution and incomplete
 captured discussion remain freshness limits. Historical F3/F4 findings require
 independent closure verification beyond the scoped SHA/provenance regression
-coverage; mutation locking (F2) alone never establishes freshness. Claude
-command/plugin resolution and non-
-publication behavior need deployment verification (F7); the wrapper does not
-prove that a plugin cannot post comments. See README for operational caveats.
+coverage; mutation locking (F2) alone never establishes freshness.
+External reviewer execution and publication behavior belong to the independently
+loaded provider, not this package. See README for operational caveats.

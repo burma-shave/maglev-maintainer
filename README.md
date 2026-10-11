@@ -50,12 +50,12 @@ Reload Pi and update external allowlists, explicit tool calls, and integrations:
 | `maglev_pr_api_{start,stop,status}` | `maglev_api_runtime_{start,stop,status}` |
 | `maglev_pr_review_json` | `maglev_pr_review_draft_save` |
 | `maglev_pr_review_json_{clear,list,load}` | `maglev_pr_review_draft_{clear,list,load}` |
-| `maglev_pr_bench_kickoff` | `maglev_pr_review_instructions_load` |
 | `/maglev-pr-review-json` | `/maglev-pr-review-draft` |
 
 Former names are not registered as aliases. Workspace capability values use the
-new tool names; `benchKickoffTool`, `reviewJsonTool`, and `reviewJsonLoadTool` keys
-are replaced by `reviewInstructionsLoadTool` and `reviewDraft{Save,Clear,List,Load}Tool`.
+new tool names; `reviewJsonTool` and `reviewJsonLoadTool` keys are replaced by
+`reviewDraft{Save,Clear,List,Load}Tool`. The former `benchKickoffTool` and
+`reviewInstructionsLoadTool` keys are removed without replacements.
 State paths, draft JSON format, Bench identities, runtime identities, and lifecycle
 behavior are unchanged. Metadata tool names and existing runtime skill names are
 unchanged by this migration.
@@ -104,14 +104,11 @@ metadata tool names are unchanged.
   - `maglev_pr_review_draft_clear` (deletes the current prospective PR review JSON draft)
   - `maglev_pr_review_draft_list` (lists current prospective PR review JSON drafts)
   - `maglev_pr_review_draft_load` (loads a current draft into model context for discussion)
-  - `maglev_pr_code_review` (headless Claude Code /code-review by PR number, no Bench or checkout required; optional explicit checkout; captures a full log)
-  - `maglev_pr_review_instructions_load` (on-demand review instructions and PR context; never run automatically)
 - Skills:
   - `maglev-artifacts` (placement and organization of working artifacts; dedicated tools retain ownership of canonical state)
   - `maglev-handoff-script` (executable scripts for operations performed outside sandboxed Pi)
   - `maglev-bug-triage` (issue numbers/URLs or free-text reports; conversation-only verdict, severity, and fix effort)
   - `maglev-pr-triage`
-  - `maglev-pr-code-review` (Claude Code review plus focused validation and automatic draft handoff for settled findings)
   - `maglev-pr-review-draft` (packages settled findings as prospective review JSON; never submits)
   - `maglev-pr-analysis-record` (durable SHA-attributed history of every PR analysis, including clean and incomplete outcomes, stored in decision observations)
   - `maglev-bench` (one lifecycle skill for branch and PR environments, including PR association and reset)
@@ -160,21 +157,31 @@ snapshot head. Reset still lacks close's unpushed-commit safeguards (F1).
 Start/recovery never invokes review or submits a task. Optional `context` is saved
 under the original Bench's state directory and appended to a new Pi window's
 system prompt only; blank context is ignored and existing Pi windows refuse it.
-Dry runs write no files. On explicit request, `maglev_pr_review_instructions_load`
-returns instructions to the calling agent, not another Pi session. Review remains
-PR-facing and is separate from lifecycle.
+Dry runs write no files. Review execution is separate from lifecycle.
 
 Use `/maglev-maintainer-status` to check root writability, snapshot availability/count, decision file status, active PR Bench count, `gh auth status`, and `tmux` availability.
 
 ## Review and draft skills
 
-Use `maglev-pr-code-review` to run Claude Code by PR number (optional explicit
-checkout) and validate its findings. Whenever settled actionable PR findings emerge
-in any context, use `maglev-pr-review-draft` automatically to save prospective
-review JSON, whether they came from Claude Code, API/spec review, manual
-investigation, or the maintainer. No separate draft request or review-only mode
-exists. Report the draft path/event or a concrete save blocker. Neither skill
-starts a Bench or submits a GitHub review. No findings alone is not approval.
+Code-review execution comes from separately loaded review extensions and skills,
+discovered through Pi. Maglev Maintainer has no review-provider dependency,
+launcher, automatic installation, or shell fallback. It loads without a review
+provider or Claude CLI. Discovery makes external resources available; it does
+not guarantee that a reviewer follows the maintainer history/draft policies.
+
+**Breaking removal:** `maglev_pr_code_review`, `maglev_pr_review_instructions_load`,
+the `maglev-pr-code-review` skill, and the local batch-review agent are removed
+without aliases or replacements. Reload Pi and update external allowlists or
+explicit invocations. Review providers own execution, publication controls, and
+log retention. Existing observations, drafts, logs, and Bench artifacts are not
+migrated or deleted; evidence can reference externally returned log paths.
+
+Whenever settled actionable PR findings emerge in any context, use
+`maglev-pr-review-draft` automatically to save prospective review JSON, whether
+they came from an external reviewer, API/spec review, manual investigation, or
+the maintainer. No separate draft request or review-only mode exists. Report the
+draft path/event or a concrete save blocker. Draft handling neither starts a
+Bench nor submits a GitHub review. No findings alone is not approval.
 
 Every PR analysis also follows `maglev-pr-analysis-record`: append a self-contained
 `analysis:` observation via `maglev_pr_decisions` with date, type/scope, analyzed SHA
@@ -193,12 +200,9 @@ reviews are skipped whether clean or with findings, unless a concrete new
 scope/validation need or explicit fresh-review override justifies a rerun. A request
 to review more PRs is not such an override. Candidate analysts return compact
 history evidence; parents enforce this guardrail before dispatch. This is skill
-policy, not a deterministic refusal enforced by the raw code-review tool.
-
-The existing explicitly requested `maglev_pr_review_instructions_load` is the composition
-point: its instructions load the code-review skill first, then the draft skill.
-Starting/recovering a Bench still runs neither automatically; startup context is
-background only. Run `/reload` to discover the new skills.
+policy, not a deterministic refusal enforced on external review tools.
+Starting/recovering a Bench runs no review automatically; startup context is
+background only.
 
 ## Privileged handoff scripts
 
@@ -421,9 +425,6 @@ The extension keeps Pi-specific adapter code separate from ordinary TypeScript f
 - `extensions/bench-tools.ts` — the single public Bench lifecycle API and commands, with PR-to-ID resolution.
 - `extensions/bench-command-args.ts` — deterministic branch/PR start and stable-ID command argument parsing.
 - `extensions/bench-context.ts` — caller-supplied startup context persistence outside the source checkout.
-- `extensions/bench-kickoff.ts` — on-demand read-only review kickoff context loader, independent of Bench startup.
-- `extensions/code-review.ts` — headless Claude Code invocation, timeout handling, and captured review logs.
-- `prompts/bench-kickoff.md` — external template used only by the on-demand kickoff tool.
 
 Domain modules should expose ordinary reusable functions with domain names, such as `listPrsNeedingInference`, `loadPrMetadata`, `buildStateQuery`, `listBenches`, `inspectBench`, and `saveDecision`. Any Pi tool/command infrastructure details should be adapted in `extensions/index.ts`.
 
@@ -548,10 +549,5 @@ No Pi session custom entries should be used for canonical workflow state.
   threads. Historical freshness findings F3/F4 require independent closure
   verification; neither mutation locking nor this scoped change is a full
   freshness/coverage audit.
-- Claude `/code-review` publication depends on the installed command/plugin
-  version (F7). Some variants post PR comments automatically; verify active
-  resolution and use a non-publishing-by-default variant for local-only review.
-  The wrapper invokes `/code-review N` without `--comment` but does not enforce a
-  GitHub write capability boundary. Unit tests do not establish live resolution.
 - Queue refresh keys, interactive TRIAGE tabs, and manual marking are planned,
   not features of the current read-only `/maglev-prs` report.

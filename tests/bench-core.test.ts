@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
-import { buildBenchKickoffPromptFromTemplate, classifyBenchDirtyStatus, formatBenchLine, formatBenchReportLines, freshnessFor, parseBenchCommandArgs, parseWorktrees, planBenchClose, planBenchReset, planBenchStart, prFromBenchPath, prFromBranch } from "../extensions/bench-core.ts";
+import { classifyBenchDirtyStatus, formatBenchLine, formatBenchReportLines, freshnessFor, parseBenchCommandArgs, parseWorktrees, planBenchClose, planBenchReset, planBenchStart, prFromBenchPath, prFromBranch } from "../extensions/bench-core.ts";
 import { makeBenchState, makeDecision, makeSnapshotPr } from "../testdata/fixtures.ts";
 
 test("parseWorktrees parses porcelain worktree output", () => {
@@ -183,27 +182,6 @@ test("planBenchStart reports review readiness as informational but guards stale 
 	const missingHead = planBenchStart({ pr: makeSnapshotPr({ headOid: "" }) });
 	assert.equal(missingHead.status, "needs-override");
 	assert.equal(missingHead.unacknowledgedWarnings[0].code, "missing-snapshot-head");
-});
-
-test("buildBenchKickoffPrompt includes existing PR reviews and comments", () => {
-	const pr = makeSnapshotPr({
-		number: 1416,
-		reviews: [{ author: "maintainer", state: "CHANGES_REQUESTED", submittedAt: "2026-01-03T00:00:00Z", body: "Please fix stop ordering." }],
-		comments: [{ author: "contributor", createdAt: "2026-01-04T00:00:00Z", body: "Pushed an update for the ordering issue." }],
-	});
-
-	const template = readFileSync(new URL("../prompts/bench-kickoff.md", import.meta.url), "utf8");
-	const prompt = buildBenchKickoffPromptFromTemplate(template, pr);
-
-	assert.match(prompt, /maglev_pr_code_review/);
-	assert.doesNotMatch(prompt, /\/skill:claude-code-pr-review 1416/);
-	assert.match(prompt, /Existing PR reviews to account for:/);
-	assert.match(prompt, /maintainer — CHANGES_REQUESTED/);
-	assert.match(prompt, /Please fix stop ordering/);
-	assert.match(prompt, /Existing PR comments to account for:/);
-	assert.match(prompt, /which prior feedback appears addressed, which appears still unaddressed, and which is unclear/);
-	assert.match(prompt, /contributor/);
-	assert.match(prompt, /Pushed an update for the ordering issue/);
 });
 
 test("planBenchStart uses gh pr checkout instead of manual PR head remote configuration", () => {

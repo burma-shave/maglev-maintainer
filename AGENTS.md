@@ -158,14 +158,14 @@ Reuse is not a new code review or approval; this is not a post-review SHA gate.
 
 ### Reviews and drafts
 
-`maglev-pr-code-review` runs the existing Claude Code tool and validates findings.
+Code-review execution belongs to independently loaded review resources, discovered
+through Pi. This package provides no review runner, kickoff, or fallback.
 `maglev-pr-review-draft` packages already-settled findings from any review source;
 it must not invent findings or submit reviews. OBA API review is a distinct
 behavior/client/spec review, not a replacement for general code review.
 
-The current explicitly requested `maglev_pr_review_instructions_load` template composes code
-review and draft creation. It is never invoked by start/recovery. Whenever settled
-actionable PR review findings emerge in any context (Claude Code, API/spec,
+Review execution and draft creation are never invoked by Bench start/recovery.
+Whenever settled actionable PR review findings emerge in any context (external review, API/spec,
 manual investigation, or maintainer discussion), invoke `maglev-pr-review-draft`
 and save them automatically. No separate draft request or review-only mode exists.
 A review handoff must include the saved draft path/event or a concrete save blocker.
@@ -173,8 +173,9 @@ No findings alone is not approval; failed/incomplete reviews must not clear draf
 
 Prospective review JSON must be written through `maglev_pr_review_draft_save`, and
 cleared through its dedicated tool. Keep summary/comments PR-facing; report local
-housekeeping separately. Claude command/plugin publication behavior is an open
-deployment verification issue (F7), not guaranteed by a local review wrapper.
+housekeeping separately. External reviewer execution and publication behavior
+are owned by that provider; resource discovery does not guarantee adherence to
+the maintainer history/draft policies.
 
 ### Documents and privileged handoffs
 

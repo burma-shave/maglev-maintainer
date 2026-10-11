@@ -109,12 +109,10 @@ require their dedicated flags. Duplicate PR lifecycle tools/commands are removed
 /maglev-bench-close <returned-id> --keep-checkout --apply
 ```
 
-Review and draft creation are separate from lifecycle. Do not invoke
-`maglev_pr_review_instructions_load` automatically after starting or recovering a Bench.
-Only load kickoff on explicit request and follow its instructions from the
-specified checkout. Use `../maglev-pr-code-review/SKILL.md` for standalone Claude
-Code review and `../maglev-pr-review-draft/SKILL.md` for settled findings. Starting
-or recovering a Bench runs neither automatically.
+Review execution and draft creation are separate from lifecycle. Starting or
+recovering a Bench runs neither automatically. Review providers are independently
+loaded resources, not part of this skill. Use `../maglev-pr-review-draft/SKILL.md`
+for settled findings and `../maglev-pr-analysis-record/SKILL.md` for PR evidence.
 
 Use `../maglev-artifacts/SKILL.md` for artifact placement and the returned
 per-Bench report directory. Do not edit Bench manifests directly or call legacy

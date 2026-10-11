@@ -55,17 +55,6 @@ export const StateQueryParamsSchema = Type.Object({
 	limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, description: "Maximum rows to return. Defaults to all selected rows." })),
 });
 
-export const CodeReviewParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-	workingDirectory: Type.Optional(Type.String({ description: "Optional repository checkout for local review. Omit for remote PR-number-only review from the current directory; no Bench or checkout required." })),
-	timeoutSeconds: Type.Optional(Type.Number({ minimum: 1, maximum: 3600, description: "Claude Code review timeout in seconds. Defaults to 1200 (20 minutes)." })),
-});
-
-export const BenchKickoffParamsSchema = Type.Object({
-	pr: PrNumberSchema,
-	context: Type.Optional(Type.String({ description: "Optional additional context for the on-demand review kickoff." })),
-});
-
 export const ReviewJsonCommentSchema = Type.Object({
 	path: Type.String({ minLength: 1, description: "Path to the file in the PR diff." }),
 	line: Type.Number({ minimum: 1, description: "Line number on the selected diff side." }),
@@ -123,7 +112,6 @@ export type SnapshotStalenessParams = Static<typeof SnapshotStalenessParamsSchem
 export type LoadMetadataParams = Static<typeof LoadMetadataParamsSchema>;
 export type NeedsInferenceParams = Static<typeof NeedsInferenceParamsSchema>;
 export type StateQueryParams = Static<typeof StateQueryParamsSchema>;
-export type CodeReviewParams = Static<typeof CodeReviewParamsSchema>;
 export type ReviewJsonParams = Static<typeof ReviewJsonParamsSchema>;
 export type ReviewJsonClearParams = Static<typeof ReviewJsonClearParamsSchema>;
 export type ReviewJsonListParams = Static<typeof ReviewJsonListParamsSchema>;

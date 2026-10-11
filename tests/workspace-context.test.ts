@@ -32,7 +32,8 @@ test("buildWorkspaceContext detects current PR Bench from cwd", () => {
 	assert.equal(context.capabilities.benchResetTool, "maglev_bench_reset");
 	assert.ok(!("generalBenchStartTool" in context.capabilities));
 	assert.equal(context.capabilities.companionReposTool, "maglev_companion_repos_resolve");
-	assert.equal(context.capabilities.reviewInstructionsLoadTool, "maglev_pr_review_instructions_load");
+	assert.ok(!("reviewInstructionsLoadTool" in context.capabilities));
+	assert.equal(context.capabilities.decisionsTool, "maglev_pr_decisions");
 	assert.equal(context.capabilities.reviewDraftSaveTool, "maglev_pr_review_draft_save");
 	assert.equal(context.capabilities.reviewDraftClearTool, "maglev_pr_review_draft_clear");
 	assert.equal(context.capabilities.reviewDraftListTool, "maglev_pr_review_draft_list");

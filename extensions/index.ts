@@ -7,12 +7,11 @@ import { registerGeneralBenchTools } from "./bench-tools.ts";
 import { loadBenchDefinitions } from "./bench-registry.ts";
 import { type ExtensionAPI, type ExtensionCommandContext, withFileMutationQueue } from "@earendil-works/pi-coding-agent";
 import { Box, matchesKey, Text, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { collectAllBenchStates, inspectBench, listBenches } from "./bench.ts";
-import { loadBenchKickoff } from "./bench-kickoff.ts";
+import { collectAllBenchStates, listBenches } from "./bench.ts";
 import { deleteDecision, getDecision, listDecisions, saveDecision } from "./decisions.ts";
 import { refreshMetadata } from "./github.ts";
 import { buildQueueModel, formatQueueReportLines, queueCounts } from "./queue-core.ts";
-import { BenchKickoffParamsSchema, CodeReviewParamsSchema, CompanionReposParamsSchema, DecisionsParamsSchema, LoadMetadataParamsSchema, MaglevCheckoutParamsSchema, NeedsInferenceParamsSchema, RefreshMetadataParamsSchema, ReviewJsonClearParamsSchema, ReviewJsonListParamsSchema, ReviewJsonLoadParamsSchema, ReviewJsonParamsSchema, SnapshotStalenessParamsSchema, StateQueryParamsSchema, WorkspaceContextParamsSchema } from "./schemas.ts";
+import { CompanionReposParamsSchema, DecisionsParamsSchema, LoadMetadataParamsSchema, MaglevCheckoutParamsSchema, NeedsInferenceParamsSchema, RefreshMetadataParamsSchema, ReviewJsonClearParamsSchema, ReviewJsonListParamsSchema, ReviewJsonLoadParamsSchema, ReviewJsonParamsSchema, SnapshotStalenessParamsSchema, StateQueryParamsSchema, WorkspaceContextParamsSchema } from "./schemas.ts";
 import { BENCH_CHECKOUTS_DIR, BENCH_STATE_DIR, COMPANION_REPOS_DIR, DECISIONS_FILE, MAINTAINER_ROOT, REVIEW_JSON_DIR, SNAPSHOT_FILE, STATE_DIR } from "./paths.ts";
 import { loadDecisions, loadSnapshot, loadSnapshotOptional, writeDecisions } from "./state.ts";
 import { writeReviewJson } from "./review-json.ts";
@@ -25,7 +24,6 @@ import { decisionGetToolResult, decisionListToolResult, loadMetadataToolResult, 
 import { atomicWriteJson, commandSucceeds, runJson, runText, toolResult } from "./utils.ts";
 import { buildWorkspaceContext, formatWorkspaceContext } from "./workspace-context.ts";
 import { formatCompanionReposReport, resolveCompanionRepos } from "./companion-repos.ts";
-import { formatCodeReviewResult, runClaudeCodeReview } from "./code-review.ts";
 
 interface MaglevReportEntryData {
 	lines: string[];
@@ -128,7 +126,7 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 	pi.registerCommand(INFO_COMMAND, {
 		description: `Show info for the in-development ${DISPLAY_NAME} package`,
 		handler: async (_args, ctx) => {
-			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-bench-resolve-pr, /maglev-bench-reset, /maglev-prs, /maglev-pr-review-draft, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_workspace_context, maglev_checkout, maglev_companion_repos_resolve, maglev_api_runtime_start, maglev_api_runtime_stop, maglev_api_runtime_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_bench_resolve_pr, maglev_bench_reset, maglev_pr_review_instructions_load, maglev_pr_code_review, maglev_pr_review_draft_save, maglev_pr_review_draft_clear, maglev_pr_review_draft_list, maglev_pr_review_draft_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
+			ctx.ui.notify(`${DISPLAY_NAME} loaded. Commands: /maglev-benches, /maglev-bench-start, /maglev-bench-inspect, /maglev-bench-close, /maglev-bench-associate-pr, /maglev-bench-resolve-pr, /maglev-bench-reset, /maglev-prs, /maglev-pr-review-draft, /${STATUS_COMMAND}. Tools: maglev_bench_list, maglev_bench_inspect, maglev_bench_start, maglev_bench_close, maglev_bench_associate_pr, maglev_workspace_context, maglev_checkout, maglev_companion_repos_resolve, maglev_api_runtime_start, maglev_api_runtime_stop, maglev_api_runtime_status, maglev_pr_snapshot_staleness, maglev_pr_refresh_metadata, maglev_pr_load_metadata, maglev_pr_state_query, maglev_pr_needs_inference, maglev_pr_decisions, maglev_bench_resolve_pr, maglev_bench_reset, maglev_pr_review_draft_save, maglev_pr_review_draft_clear, maglev_pr_review_draft_list, maglev_pr_review_draft_load. Snapshot: ${SNAPSHOT_FILE}`, "info");
 		},
 	});
 
@@ -384,45 +382,6 @@ export default function maglevMaintainer(pi: ExtensionAPI) {
 		async execute(_toolCallId, params) {
 			const result = await listPrsNeedingInference(params, { loadSnapshot, loadDecisions });
 			return needsInferenceToolResult(result, SNAPSHOT_FILE, DECISIONS_FILE);
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_review_instructions_load",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Review Instructions Load",
-		description: "Load the on-demand read-only PR review kickoff instructions and snapshot context for the calling agent. Does not start a bench, write a prompt file, or send input to another Pi session.",
-		promptSnippet: "Load PR Bench review kickoff instructions on demand.",
-		promptGuidelines: [
-			"Use maglev_pr_review_instructions_load only when the maintainer explicitly requests a review kickoff, never automatically after starting or recovering a bench.",
-			"The returned instructions apply to the calling agent; use the specified PR Bench checkout for review. No review is executed by this tool itself.",
-		],
-		parameters: BenchKickoffParamsSchema,
-		async execute(_toolCallId, params) {
-			const { bench } = await inspectBench(params.pr);
-			const result = await loadBenchKickoff({ ...params, benchPath: bench?.benchPath });
-			return toolResult(`Snapshot: ${result.snapshotFetchedAt}\n\n${result.prompt}`, result);
-		},
-	});
-
-	pi.registerTool({
-		name: "maglev_pr_code_review",
-		namespace: MAGLEV_TOOL_NAMESPACE,
-		label: "Maglev PR Code Review",
-		description: "Run Claude Code /code-review for a Maglev PR by number, without requiring a Bench or checkout. Optionally use an explicit checkout.",
-		promptSnippet: "Run a prospective Claude Code review by PR number or from an explicit checkout.",
-		promptGuidelines: [
-			"Use maglev_pr_code_review for the initial PR Bench review instead of manually invoking Claude Code or the claude-code-pr-review skill.",
-			"Pass pr alone for remote review: no Bench lookup, clone, or checkout is required. Pass workingDirectory explicitly only for checkout-based review.",
-			`This tool captures Claude Code stdout/stderr and writes a full log under the ${DISPLAY_NAME} bench state directory; it does not submit GitHub reviews.`,
-		],
-		parameters: CodeReviewParamsSchema,
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-			const result = await runClaudeCodeReview(params, {
-				processCwd: () => ctx?.cwd ?? process.cwd(),
-				runText: (cmd, args, cwd) => runText(cmd, args, cwd, signal),
-			}, signal);
-			return toolResult(formatCodeReviewResult(result), { rootDir: MAINTAINER_ROOT, benchStateDir: BENCH_STATE_DIR, ...result });
 		},
 	});
 

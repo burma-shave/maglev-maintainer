@@ -121,7 +121,6 @@ export function buildWorkspaceContext(input: WorkspaceContextInput, paths: Works
 			benchResetTool: "maglev_bench_reset",
 			benchResolvePrTool: "maglev_bench_resolve_pr",
 			benchAssociatePrTool: "maglev_bench_associate_pr",
-			reviewInstructionsLoadTool: "maglev_pr_review_instructions_load",
 			reviewDraftSaveTool: "maglev_pr_review_draft_save",
 			reviewDraftClearTool: "maglev_pr_review_draft_clear",
 			reviewDraftListTool: "maglev_pr_review_draft_list",
