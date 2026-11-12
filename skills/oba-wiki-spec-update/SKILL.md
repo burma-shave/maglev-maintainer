@@ -41,6 +41,8 @@ Use `maglev_companion_repos_resolve` directly or the packaged `maglev-companion-
 
 Record the resolved wiki path and Java repo path. All wiki edits happen in `maglev.wiki`, not in the Maglev repo. Use the Java repo to verify or refresh Java behavior citations rather than relying only on previously written handoff prose.
 
+Before editing, update the wiki checkout; the companion resolver deliberately does not pull this editable repo automatically. Inspect its branch, working-tree changes, and local commits, preserve any existing work, then fetch and fast-forward from its upstream (`git pull --ff-only` for a clean checkout on the intended branch). If necessary, stash existing changes and restore them after the update; never discard them. Stop and ask if the branch is unexpected, an upstream is missing, the update cannot fast-forward, restoring changes conflicts, or network access is unavailable or prohibited. Do not merely report that the wiki is behind and continue editing. Do not reset, rebase, or force an update.
+
 ## Phase 2: Read the handoff and inspect target pages
 
 First read the wiki endpoint index, `<wiki-path>/OBA-API-Specs.md`, so endpoint-to-page mappings and related shared pages are explicit before editing any page.
